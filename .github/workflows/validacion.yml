@@ -1,0 +1,17 @@
+    name: Validar proyecto
+
+    on:
+
+      push:
+
+      pull_request:
+    jobs:
+
+        validar:
+            runs-on: ubuntu-latest
+            steps:
+                - uses: actions/checkout@v3
+                - name: Validar proyecto
+                  run: |
+                    echo "Validando proyecto..."
+                    # Aquí puedes agregar los comandos para validar tu proyecto
