@@ -18,4 +18,5 @@ const loginHandler = (req, res) => {
         expiraEn: "60m"
     });
 };
+
 module.exports = { loginHandler };
