@@ -30,13 +30,13 @@ El sistema implementa una **Arquitectura Hexagonal (Ports & Adapters)** estructu
 - `tests/`: Pruebas unitarias de casos de uso y cobertura del motor analítico.
 
 
-##Resumen de base de datos
+## Resumen de base de datos
 Tiene 7 tablas y estan basadas en los diagramas UML
 use Mysql Workbench para hacer la base de datos
 ##Tablas:
 - Usuario: Guarda a las personas que definimos como usuarios xd y solo acepta esos valores, funciona para poder hacer la HU1
 
--Cursos: esta tabla depende del usuarioy cada curso tiene su propio ID de profesor jefe y cada profesor puede administrar un solo curso
+- Cursos: esta tabla depende del usuarioy cada curso tiene su propio ID de profesor jefe y cada profesor puede administrar un solo curso
 
 - Estudiante: esta depende del curso y cada estudiante tiene una ID curso, tienen una columna de riesgo(bajo/medio/alto)
 
