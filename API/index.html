@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Principal - Sistema de Alerta Temprana</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #0d9488;
+            --background: #f8fafc;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --warning-bg: #fef3c7;
+            --warning-text: #92400e;
+            --error-bg: #fee2e2;
+            --error-text: #991b1b;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            background-color: var(--background);
+            color: var(--text);
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .container {
+            max-width: 960px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .panel-control {
+            background: var(--card);
+            padding: 1.25rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        select, button {
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+        }
+        button {
+            background-color: var(--secondary);
+            color: white;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover { opacity: 0.9; }
+        .grid-cursos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .card-curso {
+            background: var(--card);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-top: 4px solid var(--secondary);
+        }
+        .card-curso h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+        }
+        .card-curso p {
+            margin: 0.3rem 0;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+        .alerta {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        .alerta-warning {
+            background: var(--warning-bg);
+            color: var(--warning-text);
+            border: 1px solid #fde68a;
+        }
+        .alerta-error {
+            background: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid #fecaca;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Sistema Alerta Temprana CEM-Mineduc</h2>
+        <span>Sprint 1 — FastAPI / SQLite</span>
+    </header>
+
+    <div class="container">
+        <h1>Panel Principal: Cursos Asignados</h1>
+
+        <div class="panel-control">
+            <label for="docenteSelect"><strong>Docente en sesión:</strong></label>
+            <select id="docenteSelect">
+                <option value="1">Diego Rubilar (Docente - ID 1)</option>
+                <option value="2">Mirko Massa (Profesor Jefe - ID 2)</option>
+                <option value="4">Ignacio Pino (UTP sin carga - ID 4)</option>
+                <option value="999">Usuario Inexistente (Error 404 - ID 999)</option>
+            </select>
+            <button onclick="cargarCursos()">Consultar Cursos</button>
+            <span id="metricas" style="color: var(--muted); font-size: 0.85rem;"></span>
+        </div>
+
+        <div id="alertaWarning" class="alerta alerta-warning hidden"></div>
+        <div id="alertaError" class="alerta alerta-error hidden"></div>
+
+        <div id="contenedorCursos" class="grid-cursos"></div>
+    </div>
+
+    <script>
+        async function cargarCursos() {
+            const docenteId = document.getElementById('docenteSelect').value;
+            const contenedor = document.getElementById('contenedorCursos');
+            const alertaWarning = document.getElementById('alertaWarning');
+            const alertaError = document.getElementById('alertaError');
+            const metricas = document.getElementById('metricas');
+
+            contenedor.innerHTML = '';
+            alertaWarning.classList.add('hidden');
+            alertaError.classList.add('hidden');
+            metricas.textContent = 'Consultando API...';
+
+            const t0 = performance.now();
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/cursos?docente_id=${docenteId}`);
+                const t1 = performance.now();
+                metricas.textContent = `Latencia: ${(t1 - t0).toFixed(0)} ms`;
+
+                if (response.status === 404) {
+                    const errorData = await response.json();
+                    alertaError.textContent = errorData.detail || "Docente no encontrado.";
+                    alertaError.classList.remove('hidden');
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Regla CU-01: Docente sin cursos asignados
+                if (!data.tiene_carga || data.cursos.length === 0) {
+                    alertaWarning.textContent = data.mensaje || "Actualmente no tiene cursos asignados. Contacte a U.T.P.";
+                    alertaWarning.classList.remove('hidden');
+                    return;
+                }
+
+                // Renderizado de cursos asignados
+                data.cursos.forEach(curso => {
+                    const card = document.createElement('div');
+                    card.className = 'card-curso';
+                    card.innerHTML = `
+                        <h3>${curso.nombre}</h3>
+                        <p><strong>Nivel:</strong> ${curso.nivel}</p>
+                        <p><strong>Sección:</strong> Letra ${curso.letra}</p>
+                        <p><strong>Año Lectivo:</strong> ${curso.anio_lectivo}</p>
+                        <p><strong>Total Estudiantes:</strong> ${curso.total_estudiantes}</p>
+                    `;
+                    contenedor.appendChild(card);
+                });
+
+            } catch (err) {
+                metricas.textContent = '';
+                alertaError.textContent = "Error al conectar con la API en http://127.0.0.1:8000. Verifique que Uvicorn esté activo.";
+                alertaError.classList.remove('hidden');
+            }
+        }
+
+        window.onload = cargarCursos;
+    </script>
+</body>
+</html>
