@@ -1,0 +1,61 @@
+<!-- frontend/login_profesor.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ingreso Profesor</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#f2f4f7;display:flex;align-items:center;
+       justify-content:center;height:100vh;margin:0}
+  .caja{background:#fff;padding:36px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.1);width:380px}
+  h2{color:#1f2937;margin-top:0}
+  .volver{font-size:13px;color:#059669;cursor:pointer;text-decoration:underline}
+  input,button{width:100%;padding:12px;margin-top:14px;border-radius:8px;font-size:15px;box-sizing:border-box}
+  input{border:1px solid #d1d5db}
+  button{background:#059669;color:#fff;border:none;cursor:pointer}
+  button:hover{background:#047857}
+  #estado{color:#b91c1c;font-size:13px;margin-top:10px}
+  .ayuda{color:#6b7280;font-size:12px;margin-top:16px;line-height:1.5}
+</style>
+</head>
+<body>
+  <div class="caja">
+    <span class="volver" onclick="location.href='index.html'">&larr; Volver</span>
+    <h2>Ingreso Profesor</h2>
+    <input id="email" type="email" placeholder="Correo (ej: diego.docente@liceo.cl)">
+    <input id="password" type="password" placeholder="Contraseña">
+    <button onclick="ingresar()">Ingresar</button>
+    <div id="estado"></div>
+    <div class="ayuda">
+      Cuentas de prueba (contraseña genérica: <strong>123456</strong>):<br>
+      diego.docente@liceo.cl<br>
+      mirko.jefe@liceo.cl<br>
+      maria.directivo@liceo.cl (sin cursos asignados)<br>
+    </div>
+  </div>
+<script>
+const API = location.protocol === "file:" ? "http://127.0.0.1:8000" : "";  // mismo servidor; solo usa :8000 si abres el .html como archivo
+async function ingresar(){
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const estado = document.getElementById("estado");
+  estado.textContent = "";
+  if(!email || !password){ estado.textContent = "Ingresa correo y contraseña."; return; }
+  try{
+    const r = await fetch(`${API}/api/login`, {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({email, password})
+    });
+    const d = await r.json();
+    if(!r.ok){ estado.textContent = d.detail || "No se pudo iniciar sesión."; return; }
+    if(d.tipo !== "DOCENTE"){ estado.textContent = "Esta cuenta no es de profesor."; return; }
+    location.href = `portal_profesor.html?id=${d.id}`;
+  }catch(e){
+    estado.textContent = "No se pudo conectar con la API. Verifica que uvicorn esté corriendo.";
+  }
+}
+document.getElementById("password").addEventListener("keydown", e => { if(e.key === "Enter") ingresar(); });
+</script>
+</body>
+
+</html>

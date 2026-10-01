@@ -1,0 +1,83 @@
+<!-- frontend/portal_estudiante.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Portal del Estudiante</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#f2f4f7;margin:0;padding:30px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;max-width:760px;margin:0 auto 20px}
+  .salir{color:#2563eb;cursor:pointer;font-size:13px;text-decoration:underline}
+  .card{background:#fff;max-width:760px;margin:0 auto;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.08);
+        padding:28px}
+  h2{margin-top:0;color:#1f2937}
+  .curso{color:#6b7280;margin-bottom:20px}
+  .kpis{display:flex;gap:16px;margin-bottom:24px}
+  .kpi{flex:1;background:#f9fafb;border-radius:10px;padding:16px;text-align:center}
+  .kpi span{display:block;font-size:22px;font-weight:bold}
+  .bajo{color:#059669}.medio{color:#d97706}.alto{color:#dc2626}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{padding:10px;text-align:left;border-bottom:1px solid #e5e7eb;font-size:14px}
+  th{color:#6b7280;font-weight:600}
+  .promedio-bueno{color:#059669;font-weight:bold}
+  .promedio-regular{color:#d97706;font-weight:bold}
+  .promedio-malo{color:#dc2626;font-weight:bold}
+  #msj{color:#b91c1c}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>Portal del Estudiante</strong>
+    <span class="salir" onclick="location.href='index.html'">Cerrar sesión</span>
+  </div>
+  <div class="card" id="contenido">Cargando...</div>
+
+<script>
+const API = location.protocol === "file:" ? "http://127.0.0.1:8000" : "";  // mismo servidor; solo usa :8000 si abres el .html como archivo
+const params = new URLSearchParams(location.search);
+const id = params.get("id");
+
+function esc(t){ return String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function claseNota(p){
+  if(p === null || p === undefined) return "";
+  return p >= 5.5 ? "promedio-bueno" : p >= 4.0 ? "promedio-regular" : "promedio-malo";
+}
+
+async function cargar(){
+  const cont = document.getElementById("contenido");
+  if(!id){ cont.innerHTML = "<p id='msj'>Falta el ID del alumno. Vuelve a iniciar sesión.</p>"; return; }
+  try{
+    const r = await fetch(`${API}/api/estudiantes/${id}`);
+    if(!r.ok){ cont.innerHTML = `<p id='msj'>No se pudo cargar el alumno (código ${r.status}).</p>`; return; }
+    const d = await r.json();
+    const claseRiesgo = d.nivel_riesgo_actual === "ALTO" ? "alto" : d.nivel_riesgo_actual === "MEDIO" ? "medio" : "bajo";
+
+    const filas = Object.entries(d.asignaturas || {}).map(([nombre, info]) => `
+      <tr>
+        <td>${esc(nombre)}</td>
+        <td>${info.notas.map(esc).join(" · ")}</td>
+        <td class="${claseNota(info.promedio)}">${info.promedio ?? "-"}</td>
+      </tr>`).join("");
+
+    cont.innerHTML = `
+      <h2>${esc(d.nombres)} ${esc(d.apellidos)}</h2>
+      <p class="curso">RUT ${esc(d.rut)} · Curso: ${esc(d.curso?.nombre)}</p>
+      <div class="kpis">
+        <div class="kpi"><span class="${claseNota(d.promedio_general)}">${d.promedio_general ?? "-"}</span>Promedio general</div>
+        <div class="kpi"><span>${d.promedio_asistencia != null ? d.promedio_asistencia + "%" : "-"}</span>Asistencia</div>
+        <div class="kpi"><span class="${claseRiesgo}">${d.nivel_riesgo_actual}</span>Nivel de riesgo</div>
+      </div>
+      <table>
+        <thead><tr><th>Asignatura</th><th>Notas</th><th>Promedio</th></tr></thead>
+        <tbody>${filas || "<tr><td colspan=3>Sin registros aún</td></tr>"}</tbody>
+      </table>`;
+  }catch(e){
+    cont.innerHTML = "<p id='msj'>No se pudo conectar con la API. Verifica que uvicorn esté corriendo.</p>";
+  }
+}
+cargar();
+</script>
+</body>
+
+</html>

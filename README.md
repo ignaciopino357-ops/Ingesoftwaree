@@ -10,25 +10,37 @@ Plataforma web centralizada orientada a la detección precoz y mitigación del r
 - Ignacio Pino
 
 ## Arquitectura
-El sistema implementa una **Arquitectura Hexagonal (Ports & Adapters)** estructurada bajo un **Monolito Modular**:
-- **Núcleo de Dominio:** Entidades del negocio escolar (Estudiante, EvaluacionRiesgo, Derivacion) y algoritmo de evaluación lógica desacoplado de dependencias externas.
-- **Puertos de Aplicación:** Contratos de interfaz para casos de uso (In) y servicios de persistencia/notificación (Out).
-- **Adaptadores de Infraestructura:** Controladores REST perimetrales (JWT/RBAC), base de datos relacional y servicios SMTP/PDF.
+API REST en **Python / FastAPI** organizada en capas dentro de un monolito modular:
+- **routers/**: adaptadores de entrada HTTP (validan la petición y traducen excepciones a códigos HTTP).
+- **services/**: reglas de negocio (login, carga académica, carga masiva de notas, reportes).
+- **repositories/**: acceso a datos (SQL sobre SQLite).
+- **schemas/**: modelos Pydantic de entrada/salida.
+- **frontend/**: portal web (HTML + JS) servido por la propia API en `/app/`.
 
 ## Tecnologías
-- **Backend Runtime:** Node.js (Express / TypeScript)
-- **Base de Datos:** PostgreSQL
-- **Seguridad:** Control de Acceso Basado en Roles (RBAC), JWT (JSON Web Tokens) y bcrypt
-- **Gestión Ágil:** Taiga (Scrum)
-- **Control de Versiones:** Git / GitHub
+- **Backend:** Python 3.10+ · FastAPI · Uvicorn
+- **Base de datos:** SQLite (archivo `API/sprint1.db`, se crea sola al arrancar con datos de prueba)
+- **Excel/CSV:** openpyxl + csv
+- **Seguridad:** contraseñas con PBKDF2-HMAC-SHA256 + sal. *Pendiente:* JWT y control de acceso por rol (RBAC) en los endpoints.
+- **Gestión ágil:** Taiga (Scrum) · **Versiones:** Git / GitHub
+
+## Cómo ejecutar
+```bash
+pip install -r requirements.txt
+uvicorn main:app --reload        # ejecutar SIEMPRE desde la carpeta raíz del proyecto
+```
+- Portal: http://127.0.0.1:8000/app/
+- Documentación interactiva: http://127.0.0.1:8000/docs
+- Tests: `pytest`
+- Cuentas de prueba (contraseña `123456`): `diego.docente@liceo.cl`, `mirko.jefe@liceo.cl`, `ana.soto@alumno.liceo.cl`
 
 ## Organización del Repositorio
-- `docs/`: Artefactos de análisis, especificación de requerimientos y modelado UML de la Unidad I.
-- `src/domain/`: Entidades puras y reglas de negocio del motor de detección de riesgo.
-- `src/application/`: Casos de uso y contratos de puertos (In/Out).
-- `src/infrastructure/`: Adaptadores web REST, controladores de seguridad y adaptadores PostgreSQL/SMTP.
-- `tests/`: Pruebas unitarias de casos de uso y cobertura del motor analítico.
-
+- `main.py`: punto de entrada de la aplicación.
+- `API/`: código del backend (routers, services, repositories, schemas, database).
+- `frontend/`: páginas del portal.
+- `docs/`: artefactos de análisis, requerimientos y UML.
+- `tests/`: pruebas automáticas (usan una base de datos temporal).
+- `BaseDatos.sql`: script MySQL de referencia del diseño (el código actual usa SQLite; ver `API/database.py`).
 
 ## Resumen de base de datos
 Tiene 7 tablas y estan basadas en los diagramas UML

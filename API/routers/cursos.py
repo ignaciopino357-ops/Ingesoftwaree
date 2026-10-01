@@ -1,50 +1,33 @@
 # API/routers/cursos.py
-# Controlador de Rutas / Adaptador de Entrada HTTP (Punto 10.21 de la guía)
+# Controlador de rutas / adaptador de entrada HTTP
 
 from fastapi import APIRouter, HTTPException, Query, status
-from schemas.curso import ConsultaCursosRespuesta
-from services.curso_service import CursoService, UsuarioNoEncontradoException
 
-router = APIRouter(
-    prefix="/api/cursos",
-    tags=["Cursos"]
-)
+from API.schemas.curso import ConsultaCursosRespuesta
+from API.services.curso_service import CursoService, UsuarioNoEncontradoException
 
-# Inyección de la capa de servicio
+router = APIRouter(prefix="/api/cursos", tags=["Cursos"])
 servicio_curso = CursoService()
+
 
 @router.get(
     "",
     response_model=ConsultaCursosRespuesta,
     status_code=status.HTTP_200_OK,
     summary="Listar cursos asignados por docente",
-    description="Implementa el endpoint principal para HU 1 y caso de uso CU-01."
+    description="Endpoint principal para HU 1 y caso de uso CU-01.",
 )
 def listar_cursos_por_docente(
-    docente_id: int = Query(
-        ...,
-        ge=1,
-        description="Identificador numérico del docente en el sistema escolar"
-    )
+    docente_id: int = Query(..., ge=1, description="Identificador numérico del docente")
 ):
     """
-    Endpoint: GET /api/cursos?docente_id={id}
-    - 200 OK: Retorna la estructura de cursos asignados o bandera tiene_carga = False.
-    - 404 Not Found: El docente_id no existe en la base de datos.
-    - 422 Unprocessable Entity: Validación automática si docente_id no es entero positivo.
-    - 500 Internal Server Error: Excepción no controlada a nivel de persistencia o servidor.
+    GET /api/cursos?docente_id={id}
+    - 200: cursos asignados, o tiene_carga = False si no tiene.
+    - 404: el docente_id no existe.
+    - 422: docente_id no es un entero positivo (validación automática).
+    Cualquier otro error lo maneja FastAPI como 500 (y queda en el log del servidor).
     """
     try:
-        resultado = servicio_curso.obtener_cursos_por_docente(docente_id)
-        return resultado
-
+        return servicio_curso.obtener_cursos_por_docente(docente_id)
     except UsuarioNoEncontradoException as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc)
-        )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error interno del servidor al consultar asignación de cursos."
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))

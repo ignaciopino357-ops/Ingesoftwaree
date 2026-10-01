@@ -1,45 +1,34 @@
 # API/repositories/curso_repository.py
-# Capa de Acceso a Datos (Persistencia SQLite) - Punto 10.21
+# Capa de acceso a datos (SQLite) para Curso y Usuario.
 
-from database import obtener_conexion
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List
+
+from API.database import conexion_bd
+
 
 class CursoRepository:
-    """Encapsula el acceso y las consultas SQL a la tabla Curso y Usuario."""
+    """Encapsula las consultas SQL a las tablas Curso y Usuario."""
 
     @staticmethod
     def obtener_por_docente_id(docente_id: int) -> List[Dict[str, Any]]:
-        """Consulta en SQLite todos los cursos asignados a un docente específico."""
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-
-        query = """
-            SELECT 
-                id, 
-                nombre, 
-                nivel, 
-                letra, 
-                anio_lectivo, 
-                id_profesor_jefe, 
-                total_estudiantes
-            FROM Curso
-            WHERE id_profesor_jefe = ?
-        """
-        cursor.execute(query, (docente_id,))
-        filas = cursor.fetchall()
-        conexion.close()
-
-        # Conversión de sqlite3.Row a diccionarios estándar para Pydantic
+        with conexion_bd() as con:
+            filas = con.execute(
+                """
+                SELECT id, nombre, nivel, letra, anio_lectivo, id_profesor_jefe, total_estudiantes
+                FROM Curso
+                WHERE id_profesor_jefe = ?
+                ORDER BY nombre, id
+                """,
+                (docente_id,),
+            ).fetchall()
         return [dict(fila) for fila in filas]
 
     @staticmethod
     def existe_usuario(usuario_id: int) -> bool:
-        """Verifica en SQLite si el identificador corresponde a un usuario registrado."""
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
+        with conexion_bd() as con:
+            return con.execute("SELECT 1 FROM Usuario WHERE id = ?", (usuario_id,)).fetchone() is not None
 
-        cursor.execute("SELECT id FROM Usuario WHERE id = ?", (usuario_id,))
-        usuario = cursor.fetchone()
-        conexion.close()
-
-        return usuario is not None
+    @staticmethod
+    def existe_curso(curso_id: int) -> bool:
+        with conexion_bd() as con:
+            return con.execute("SELECT 1 FROM Curso WHERE id = ?", (curso_id,)).fetchone() is not None

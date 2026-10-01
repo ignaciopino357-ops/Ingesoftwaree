@@ -1,7 +1,7 @@
 # API/schemas/curso.py
 # Modelos Pydantic para validación y serialización de Cursos (Punto 10.21)
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 
 class CursoRespuesta(BaseModel):
@@ -14,8 +14,7 @@ class CursoRespuesta(BaseModel):
     id_profesor_jefe: Optional[int] = Field(None, description="ID del docente asignado")
     total_estudiantes: int = Field(default=0, ge=0, description="Total de alumnos matriculados")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ConsultaCursosRespuesta(BaseModel):
     """Esquema de respuesta envolvente para el endpoint de HU 1 (CU-01)."""

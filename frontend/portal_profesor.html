@@ -1,0 +1,179 @@
+<!-- frontend/portal_profesor.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Portal del Profesor</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#f2f4f7;margin:0;padding:30px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;max-width:820px;margin:0 auto 20px}
+  .salir{color:#059669;cursor:pointer;font-size:13px;text-decoration:underline}
+  .card{background:#fff;max-width:820px;margin:0 auto 20px;border-radius:12px;
+        box-shadow:0 4px 18px rgba(0,0,0,.08);padding:26px}
+  h2{margin-top:0;color:#1f2937}
+  .curso-item{border:1px solid #e5e7eb;border-radius:10px;padding:14px 18px;margin-bottom:10px;
+              cursor:pointer;display:flex;justify-content:space-between;transition:.15s}
+  .curso-item:hover{background:#f0fdf4;border-color:#059669}
+  .curso-item.activo{background:#ecfdf5;border-color:#059669}
+  table{width:100%;border-collapse:collapse;margin-top:14px}
+  th,td{padding:10px;text-align:left;border-bottom:1px solid #e5e7eb;font-size:14px}
+  th{color:#6b7280;font-weight:600}
+  .badge{padding:3px 10px;border-radius:12px;font-size:12px;color:#fff}
+  .BAJO{background:#059669}.MEDIO{background:#d97706}.ALTO{background:#dc2626}
+  #msj{color:#b91c1c}
+  #panelAlumnos{display:none}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>Portal del Profesor</strong>
+    <span class="salir" onclick="location.href='index.html'">Cerrar sesión</span>
+  </div>
+
+  <div class="card">
+    <h2>Mis asignaturas</h2>
+    <div id="listaCursos">Cargando...</div>
+  </div>
+
+  <div class="card" id="panelAlumnos">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <h2 id="tituloCurso" style="margin:0"></h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="inputArchivo" accept=".csv,.xlsx" style="font-size:13px">
+        <button onclick="subirArchivo()" style="background:#2563eb;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer">Subir notas</button>
+        <button onclick="descargar('xlsx')" style="background:#059669;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer">Descargar Excel</button>
+        <button onclick="descargar('csv')" style="background:#6b7280;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer">Descargar CSV</button>
+      </div>
+    </div>
+    <div id="resultadoCarga" style="margin-top:10px;font-size:14px"></div>
+    <details style="margin-top:12px">
+  <summary style="cursor:pointer;color:#2563eb;font-size:14px">+ Agregar alumno a este curso</summary>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px">
+    <input id="nRut" placeholder="RUT (ej: 20.123.456-7)" style="padding:8px;border:1px solid #d1d5db;border-radius:6px">
+    <input id="nEmail" placeholder="Correo del alumno" style="padding:8px;border:1px solid #d1d5db;border-radius:6px">
+    <input id="nNombres" placeholder="Nombres" style="padding:8px;border:1px solid #d1d5db;border-radius:6px">
+    <input id="nApellidos" placeholder="Apellidos" style="padding:8px;border:1px solid #d1d5db;border-radius:6px">
+  </div>
+  <button onclick="crearAlumno()" style="margin-top:8px;background:#2563eb;color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer">Crear alumno</button>
+  <span style="font-size:12px;color:#6b7280;margin-left:8px">Contraseña inicial: 123456</span>
+</details>
+    <table>
+      <thead><tr><th>Alumno</th><th>RUT</th><th>Promedio notas</th><th>Asistencia</th><th>Riesgo</th></tr></thead>
+      <tbody id="filasAlumnos"></tbody>
+    </table>
+  </div>
+
+<script>
+const API = location.protocol === "file:" ? "http://127.0.0.1:8000" : "";  // mismo servidor; solo usa :8000 si abres el .html como archivo
+const params = new URLSearchParams(location.search);
+const docenteId = params.get("id") || 2;
+
+async function cargarCursos(){
+  const cont = document.getElementById("listaCursos");
+  try{
+    const r = await fetch(`${API}/api/cursos?docente_id=${docenteId}`);
+    const d = await r.json();
+    if(!r.ok){ cont.innerHTML = `<p id='msj'>${esc(d.detail || "No se pudieron cargar los cursos.")}</p>`; return; }
+    if(!d.tiene_carga){ cont.innerHTML = `<p>${esc(d.mensaje)}</p>`; return; }
+    cont.innerHTML = d.cursos.map(c =>
+      `<div class="curso-item" id="curso-${c.id}" data-nombre="${esc(c.nombre)}" onclick="verCurso(${c.id}, this.dataset.nombre)">
+         <span>${esc(c.nombre)} (${esc(c.nivel)})</span><span>${c.total_estudiantes} alumnos</span>
+       </div>`).join("");
+  }catch(e){
+    cont.innerHTML = "<p id='msj'>No se pudo conectar con la API. Verifica que uvicorn esté corriendo.</p>";
+  }
+}
+
+let cursoActual = null;
+let nombreCursoActual = "";
+
+function esc(t){ return String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function descargar(formato){
+  if(!cursoActual) return;
+  window.open(`${API}/api/cursos/${cursoActual}/exportar?formato=${formato}`, "_blank");
+}
+async function crearAlumno(){
+  if(!cursoActual){ alert("Primero selecciona un curso"); return; }
+  const div = document.getElementById("resultadoCarga");
+  const cuerpo = {
+    rut: document.getElementById("nRut").value.trim(),
+    nombres: document.getElementById("nNombres").value.trim(),
+    apellidos: document.getElementById("nApellidos").value.trim(),
+    email: document.getElementById("nEmail").value.trim(),
+    id_curso: cursoActual
+  };
+  try{
+    const r = await fetch(`${API}/api/estudiantes`, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(cuerpo)});
+    const d = await r.json();
+    if(!r.ok){
+      const msg = typeof d.detail === "string" ? esc(d.detail) : "Revisa los campos (RUT, nombres, apellidos y correo son obligatorios).";
+      div.innerHTML = `<p style="color:#b91c1c">${msg}</p>`; return;
+    }
+    div.innerHTML = `<p style="color:#059669">${esc(d.mensaje)} (ID del alumno: ${d.id})</p>`;
+    ["nRut","nNombres","nApellidos","nEmail"].forEach(i => document.getElementById(i).value = "");
+    verCurso(cursoActual, nombreCursoActual);
+  }catch(e){ div.innerHTML = `<p style="color:#b91c1c">No se pudo conectar con la API.</p>`; }
+}
+async function subirArchivo(){
+  if(!cursoActual){ alert("Primero selecciona un curso"); return; }
+  const input = document.getElementById("inputArchivo");
+  const div = document.getElementById("resultadoCarga");
+  if(!input.files.length){ alert("Elige un archivo .csv o .xlsx primero"); return; }
+
+  const datos = new FormData();
+  datos.append("archivo", input.files[0]);
+  div.innerHTML = "Subiendo y validando...";
+
+  try{
+    const r = await fetch(`${API}/api/cursos/${cursoActual}/cargar-notas`, { method: "POST", body: datos });
+    const d = await r.json();
+    if(!r.ok){ div.innerHTML = `<p style="color:#b91c1c">${esc(typeof d.detail === "string" ? d.detail : "No se pudo procesar el archivo.")}</p>`; return; }
+
+    let html = `<p style="color:#059669">Filas insertadas: ${d.filas_insertadas} de ${d.filas_procesadas}.</p>`;
+    if(d.filas_con_error > 0){
+      html += `<p style="color:#d97706">${d.filas_con_error} fila(s) con error:</p><ul style="font-size:13px;color:#b91c1c">`;
+      html += d.errores.map(e => `<li>Fila ${e.fila}: ${esc(e.motivo)}</li>`).join("");
+      html += "</ul>";
+    }
+    div.innerHTML = html;
+    input.value = "";
+    verCurso(cursoActual, nombreCursoActual);
+  }catch(e){
+    div.innerHTML = `<p style="color:#b91c1c">No se pudo conectar con la API.</p>`;
+  }
+}
+
+async function verCurso(id, nombre){
+  cursoActual = id;
+  nombreCursoActual = nombre;
+  document.querySelectorAll(".curso-item").forEach(el => el.classList.remove("activo"));
+  document.getElementById(`curso-${id}`).classList.add("activo");
+
+  const panel = document.getElementById("panelAlumnos");
+  const filas = document.getElementById("filasAlumnos");
+  document.getElementById("tituloCurso").textContent = `Alumnos de ${nombre}`;
+  panel.style.display = "block";
+  filas.innerHTML = "<tr><td colspan=5>Cargando...</td></tr>";
+
+  try{
+    const r = await fetch(`${API}/api/cursos/${id}/estudiantes`);
+    const d = await r.json();
+    filas.innerHTML = d.estudiantes.length ? d.estudiantes.map(a => `
+      <tr>
+        <td>${esc(a.nombres)} ${esc(a.apellidos)}</td>
+        <td>${esc(a.rut)}</td>
+        <td>${a.promedio_notas ?? "-"}</td>
+        <td>${a.promedio_asistencia != null ? a.promedio_asistencia + "%" : "-"}</td>
+        <td><span class="badge ${a.nivel_riesgo_actual}">${a.nivel_riesgo_actual}</span></td>
+      </tr>`).join("") : "<tr><td colspan=5>Este curso aún no tiene alumnos cargados</td></tr>";
+  }catch(e){
+    filas.innerHTML = "<tr><td colspan=5>Error al cargar los alumnos</td></tr>";
+  }
+}
+
+cargarCursos();
+</script>
+
+</body>
+</html>

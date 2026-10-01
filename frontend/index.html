@@ -1,0 +1,32 @@
+<!-- frontend/index.html -->
+<!-- Pantalla inicial: todos entran aquí primero y eligen su rol -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Sistema de Alerta Temprana — Ingresos</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#f2f4f7;display:flex;align-items:center;
+       justify-content:center;height:100vh;margin:0}
+  .caja{background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.1);
+        text-align:center;width:360px}
+  h1{font-size:20px;color:#1f2937;margin-bottom:6px}
+  p{color:#6b7280;font-size:14px;margin-bottom:28px}
+  .opcion{display:block;width:100%;padding:16px;margin-bottom:14px;border:none;border-radius:8px;
+          font-size:16px;cursor:pointer;color:#fff}
+  .estudiante{background:#2563eb}
+  .estudiante:hover{background:#1d4ed8}
+  .profesor{background:#059669}
+  .profesor:hover{background:#047857}
+</style>
+</head>
+<body>
+  <div class="caja">
+    <h1>Portal de colegio xd</h1>
+    <p>¿Cómo deseas ingresar?</p>
+    <button class="opcion estudiante" onclick="location.href='login_estudiante.html'">Soy Estudiante</button>
+    <button class="opcion profesor" onclick="location.href='login_profesor.html'">Soy Profesor</button>
+  </div>
+</body>
+
+</html>
