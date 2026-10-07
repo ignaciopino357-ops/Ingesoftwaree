@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block titulo %}Portal alumno{% endblock %}
+{% block contenido %}
+<section class="tarjeta">
+  <h1>Hola, {{ usuario.nombre.split(" ")[0] }}</h1>
+  <p>Pronto podrás ver aquí tus notas y tu asistencia.</p>
+  <p class="suave">Esta sección (HU-09) está planificada para el Sprint 3.</p>
+</section>
+{% endblock %}

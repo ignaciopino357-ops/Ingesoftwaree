@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block titulo %}Calendario{% endblock %}
+{% block contenido %}
+<h1>Calendario del semestre</h1>
+
+<div class="dos-columnas">
+  <section class="tarjeta">
+    <h2>Semestre</h2>
+    <form method="post" action="/directiva/calendario/semestre" class="formulario en-linea">
+      <label>Inicio <input type="date" name="inicio" value="{{ inicio.isoformat() if inicio else '' }}" required></label>
+      <label>Término <input type="date" name="fin" value="{{ fin.isoformat() if fin else '' }}" required></label>
+      <button class="principal">Guardar</button>
+    </form>
+    {% if total_clases is not none %}
+      <p class="suave">{{ total_clases }} días de clases (lunes a viernes, sin feriados).</p>
+    {% else %}
+      <p class="aviso info">Aún no se define el semestre. Mientras tanto solo se bloquean sábados y domingos.</p>
+    {% endif %}
+
+    <h2>Feriados</h2>
+    <form method="post" action="/directiva/calendario/feriados" class="formulario en-linea">
+      <label>Fecha <input type="date" name="fecha" required></label>
+      <label>Nombre <input name="nombre" placeholder="Ej.: Fiestas Patrias" required></label>
+      <button class="principal">Agregar</button>
+    </form>
+    <table class="tabla compacta">
+      <tbody>
+        {% for fecha, nombre in feriados %}
+        <tr>
+          <td>{{ fecha.strftime("%d-%m-%Y") }}</td>
+          <td>{{ nombre }}{% if fecha.weekday() >= 5 %} <span class="suave">(fin de semana)</span>{% endif %}</td>
+          <td class="derecha">
+            <form method="post" action="/directiva/calendario/feriados/{{ fecha.isoformat() }}/eliminar">
+              <button class="enlace">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td class="suave">No hay feriados ingresados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="tarjeta">
+    <div class="nav-mes">
+      <a href="?mes={{ anterior }}" aria-label="Mes anterior">←</a>
+      <h2>{{ titulo_mes }}</h2>
+      <a href="?mes={{ siguiente }}" aria-label="Mes siguiente">→</a>
+    </div>
+    <table class="calendario">
+      <thead><tr>{% for d in ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"] %}<th>{{ d }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for semana in semanas %}
+        <tr>
+          {% for celda in semana %}
+            {% if celda %}<td class="{{ celda.tipo }}" title="{{ celda.titulo }}">{{ celda.dia.day }}</td>
+            {% else %}<td></td>{% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="leyenda">
+      <span><i class="clases"></i>Día de clases</span>
+      <span><i class="feriado"></i>Feriado</span>
+      <span><i class="finde"></i>Fin de semana</span>
+      <span><i class="fuera"></i>Fuera del semestre</span>
+    </div>
+  </section>
+</div>
+{% endblock %}

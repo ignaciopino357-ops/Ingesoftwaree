@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}Mis cursos{% endblock %}
+{% block contenido %}
+<h1>Mis cursos</h1>
+{% if cursos %}
+  <ul class="lista-cursos">
+    {% for c in cursos %}<li><a class="tarjeta enlace-tarjeta" href="/profesor/cursos/{{ c.id }}">{{ c.nombre }}</a></li>{% endfor %}
+  </ul>
+{% else %}
+  <div class="tarjeta"><p>Actualmente no tiene cursos asignados. Contacte a la directiva.</p></div>
+{% endif %}
+{% endblock %}

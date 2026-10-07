@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}Cursos{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Cursos</h1>
+    <p class="suave">{{ sin_curso }} alumno(s) sin curso asignado.</p>
+  </div>
+  <a class="boton" href="/directiva/calendario">Calendario del semestre</a>
+</div>
+
+<table class="tabla">
+  <thead><tr><th>Curso</th><th>Profesor jefe</th><th>Alumnos</th><th></th></tr></thead>
+  <tbody>
+    {% for c in cursos %}
+    <tr>
+      <td>{{ c.nombre }}</td>
+      <td>{{ c.profesor or "Sin asignar" }}</td>
+      <td class="num">{{ c.alumnos }}</td>
+      <td><a href="/directiva/cursos/{{ c.id }}">Administrar</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="suave">Aún no hay cursos creados.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<section class="tarjeta">
+  <h2>Crear curso</h2>
+  <form method="post" action="/directiva/cursos" class="formulario en-linea">
+    <label>Nombre <input name="nombre" placeholder="Ej.: 4° Medio A" required></label>
+    <label>Profesor jefe
+      <select name="profesor_id">
+        <option value="">Sin asignar</option>
+        {% for p in profesores %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="principal">Crear</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titulo %}Notas · {{ curso.nombre }}{% endblock %}
+{% block contenido %}
+<p><a href="/profesor/cursos/{{ curso.id }}">← {{ curso.nombre }}</a></p>
+<h1>Ingresar notas</h1>
+
+<form method="get" class="filtros">
+  <label>Asignatura
+    <select name="asignatura" onchange="this.form.submit()">
+      {% for a in asignaturas %}<option value="{{ a.id }}" {{ 'selected' if a.id == asignatura_id }}>{{ a.nombre }}</option>{% endfor %}
+    </select>
+  </label>
+  <noscript><button>Ver</button></noscript>
+</form>
+
+{% if not alumnos %}
+  <div class="tarjeta"><p>Este curso aún no tiene alumnos asignados.</p></div>
+{% else %}
+<form method="post">
+  <input type="hidden" name="asignatura_id" value="{{ asignatura_id }}">
+  <table class="tabla notas">
+    <thead><tr><th>Alumno</th>{% for n in evaluaciones %}<th>N{{ n }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for a in alumnos %}
+      <tr>
+        <td>{{ a.nombre }}</td>
+        {% for n in evaluaciones %}
+          {% set campo = "n_" ~ a.id ~ "_" ~ n %}
+          <td>
+            <input name="{{ campo }}" value="{{ valores.get(campo, '') }}" inputmode="decimal" size="3"
+                   aria-label="{{ a.nombre }}, nota {{ n }}" class="{{ 'con-error' if campo in errores }}"
+                   {% if campo in errores %}title="{{ errores[campo] }}"{% endif %}>
+          </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="suave">Notas de 1.0 a 7.0 (puede usar coma o punto). Deje vacío para borrar una nota.</p>
+  <button class="principal">Guardar notas</button>
+</form>
+{% endif %}
+{% endblock %}
