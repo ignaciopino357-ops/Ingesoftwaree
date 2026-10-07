@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block titulo %}{{ curso.nombre }}{% endblock %}
+{% block contenido %}
+<p><a href="/directiva">← Cursos</a></p>
+<h1>{{ curso.nombre }}</h1>
+
+<section class="tarjeta">
+  <h2>Profesor jefe</h2>
+  <form method="post" action="/directiva/cursos/{{ curso.id }}/profesor" class="formulario en-linea">
+    <select name="profesor_id" aria-label="Profesor jefe">
+      <option value="">Sin asignar</option>
+      {% for p in profesores %}<option value="{{ p.id }}" {{ 'selected' if p.id == curso.profesor_id }}>{{ p.nombre }}</option>{% endfor %}
+    </select>
+    <button class="principal">Guardar</button>
+  </form>
+</section>
+
+<section class="tarjeta">
+  <h2>Alumnos ({{ alumnos|length }})</h2>
+  <form method="post" action="/directiva/cursos/{{ curso.id }}/alumnos" class="formulario en-linea">
+    <select name="alumno_id" aria-label="Alumno a agregar" required>
+      {% for a in disponibles %}<option value="{{ a.id }}">{{ a.nombre }}{% if a.curso %} (en {{ a.curso }}){% endif %}</option>{% endfor %}
+    </select>
+    <button class="principal">Agregar al curso</button>
+  </form>
+  <table class="tabla compacta">
+    <tbody>
+      {% for a in alumnos %}
+      <tr>
+        <td>{{ a.nombre }}</td>
+        <td class="derecha">
+          <form method="post" action="/directiva/cursos/{{ curso.id }}/alumnos/{{ a.id }}/quitar">
+            <button class="enlace">Quitar</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td class="suave">El curso aún no tiene alumnos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

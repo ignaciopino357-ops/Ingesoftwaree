@@ -1,28 +1,26 @@
-# tests/conftest.py
-# Los tests usan una base de datos temporal: nunca tocan API/sprint1.db.
 import os
-import sys
 import tempfile
-from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(RAIZ))  # permite `import main` y `import API...` desde la raíz
+import pytest
 
-_directorio = tempfile.mkdtemp(prefix="alerta_tests_")
-os.environ["ALERTA_DB_PATH"] = os.path.join(_directorio, "test.db")  # antes de importar API.database
+# La base de pruebas va en una carpeta temporal, nunca en liceo.db
+_TMP = tempfile.mkdtemp()
+os.environ["LICEO_DB"] = os.path.join(_TMP, "test.db")
 
-import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from API.database import inicializar_base_datos  # noqa: E402
-from main import app  # noqa: E402
+from app import db  # noqa: E402
+from app.main import app  # noqa: E402
 
 
-@pytest.fixture(scope="session", autouse=True)
-def base_de_datos():
-    inicializar_base_datos()
+@pytest.fixture
+def cliente():
+    if os.path.exists(db.DB_PATH):
+        os.remove(db.DB_PATH)
+    db.iniciar()
+    with TestClient(app) as c:
+        yield c
 
 
-@pytest.fixture(scope="session")
-def client():
-    return TestClient(app)
+def entrar(cliente, usuario, clave):
+    return cliente.post("/login", data={"usuario": usuario, "clave": clave}, follow_redirects=False)

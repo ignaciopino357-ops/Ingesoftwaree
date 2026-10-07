@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titulo %}Asistencia · {{ curso.nombre }}{% endblock %}
+{% block contenido %}
+<p><a href="/profesor/cursos/{{ curso.id }}">← {{ curso.nombre }}</a></p>
+<h1>Pasar lista</h1>
+
+<form method="get" class="filtros">
+  <label>Fecha <input type="date" name="fecha" value="{{ fecha }}" onchange="this.form.submit()"></label>
+  <noscript><button>Ver</button></noscript>
+</form>
+
+{% if bloqueo %}
+  <div class="aviso error" role="alert">No se puede pasar lista este día: {{ bloqueo }}.</div>
+{% elif not alumnos %}
+  <div class="tarjeta"><p>Este curso aún no tiene alumnos asignados.</p></div>
+{% else %}
+  {% if ya_registrada %}<p class="aviso info">Este día ya tiene asistencia registrada. Puede corregirla y volver a guardar.</p>{% endif %}
+  <form method="post">
+    <input type="hidden" name="fecha" value="{{ fecha }}">
+    <table class="tabla">
+      <thead><tr><th>Alumno</th>{% for codigo, texto in estados.items() %}<th>{{ texto }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        {% for a in alumnos %}
+        <tr>
+          <td>{{ a.nombre }}</td>
+          {% for codigo, texto in estados.items() %}
+          <td class="centro">
+            <input type="radio" name="estado_{{ a.id }}" value="{{ codigo }}" aria-label="{{ a.nombre }}: {{ texto }}"
+                   {{ 'checked' if registrada.get(a.id, 'P') == codigo }}>
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button class="principal">Guardar asistencia</button>
+  </form>
+{% endif %}
+{% endblock %}

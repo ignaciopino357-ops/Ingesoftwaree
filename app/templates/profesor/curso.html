@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block titulo %}{{ curso.nombre }}{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>{{ curso.nombre }}</h1>
+    <p class="suave">{{ alumnos|length }} alumnos · Profesor jefe: {{ curso.profesor }}</p>
+  </div>
+  <div class="acciones">
+    <a class="boton principal" href="/profesor/cursos/{{ curso.id }}/notas">Ingresar notas</a>
+    <a class="boton principal" href="/profesor/cursos/{{ curso.id }}/asistencia">Pasar lista</a>
+    {% if hay_notas %}<a class="boton" href="/profesor/cursos/{{ curso.id }}/exportar/notas">Exportar notas</a>
+    {% else %}<span class="boton deshabilitado" title="No hay datos para exportar">Exportar notas</span>{% endif %}
+    {% if hay_asistencia %}<a class="boton" href="/profesor/cursos/{{ curso.id }}/exportar/asistencia">Exportar asistencia</a>
+    {% else %}<span class="boton deshabilitado" title="No hay datos para exportar">Exportar asistencia</span>{% endif %}
+  </div>
+</div>
+
+{% if not alumnos %}
+  <div class="tarjeta"><p>Este curso aún no tiene alumnos asignados. Contacte a la directiva.</p></div>
+{% else %}
+  <div class="resumen">
+    {% for nivel, n in conteo.items() %}
+      <div class="kpi"><span class="punto {{ nivel|lower|replace(' ', '-') }}"></span><strong>{{ n }}</strong> {{ nivel }}</div>
+    {% endfor %}
+  </div>
+  {% if not hay_notas and not hay_asistencia %}
+    <p class="aviso info">Este curso aún no tiene notas ni asistencia ingresadas.</p>
+  {% endif %}
+
+  <table class="tabla">
+    <thead>
+      <tr>
+        {% for col, texto in [("nombre", "Alumno"), ("promedio", "Promedio"), ("asistencia", "% Asistencia"), ("riesgo", "Estado")] %}
+          <th><a href="?orden={{ col }}" class="{{ 'activo' if orden == col }}">{{ texto }}{% if orden == col %} ↓{% endif %}</a></th>
+        {% endfor %}
+        <th>Motivo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in alumnos %}
+      <tr>
+        <td><a href="/profesor/cursos/{{ curso.id }}/alumnos/{{ a.id }}">{{ a.nombre }}</a></td>
+        <td class="num">{{ "%.1f"|format(a.promedio) if a.promedio is not none else "–" }}</td>
+        <td class="num">{{ "%.1f"|format(a.asistencia) ~ " %" if a.asistencia is not none else "–" }}</td>
+        <td><span class="punto {{ a.riesgo|lower|replace(' ', '-') }}"></span>{{ a.riesgo }}</td>
+        <td class="suave">{{ a.motivo }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="suave nota-pie">Regla: Bajo si asistencia ≥ 85 % y promedio ≥ 4.0 · Medio si falla una · Alto si fallan ambas. Esta información es solo para el profesor jefe.</p>
+{% endif %}
+{% endblock %}

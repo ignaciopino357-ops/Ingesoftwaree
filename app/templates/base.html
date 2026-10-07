@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Trayectorias{% endblock %} · Seguimiento escolar</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="barra">
+    <div class="marca">Seguimiento de trayectorias</div>
+    {% if usuario %}
+      <nav>
+        {% if usuario.rol == "directiva" %}
+          <a href="/directiva">Cursos</a>
+          <a href="/directiva/calendario">Calendario</a>
+        {% elif usuario.rol == "profesor" %}
+          <a href="/profesor">Mi curso</a>
+        {% elif usuario.rol == "alumno" %}
+          <a href="/alumno">Mis notas</a>
+        {% endif %}
+      </nav>
+      <div class="sesion">
+        <span>{{ usuario.nombre }} · <em>{{ {"directiva": "Directiva", "profesor": "Profesor jefe", "alumno": "Alumno"}[usuario.rol] }}</em></span>
+        <form method="post" action="/logout"><button class="enlace">Cerrar sesión</button></form>
+      </div>
+    {% endif %}
+  </header>
+  <main>
+    {% if aviso %}<div class="aviso {{ aviso.tipo }}" role="status">{{ aviso.texto }}</div>{% endif %}
+    {% block contenido %}{% endblock %}
+  </main>
+</body>
+</html>

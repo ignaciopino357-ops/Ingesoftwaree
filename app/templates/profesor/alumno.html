@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block titulo %}{{ alumno.nombre }}{% endblock %}
+{% block contenido %}
+<p><a href="/profesor/cursos/{{ curso.id }}">← {{ curso.nombre }}</a></p>
+<div class="encabezado">
+  <div>
+    <h1>{{ alumno.nombre }}</h1>
+    <p><span class="punto {{ alumno.riesgo|lower|replace(' ', '-') }}"></span>{{ alumno.riesgo }} · <span class="suave">{{ alumno.motivo }}</span></p>
+  </div>
+  <div class="resumen">
+    <div class="kpi"><strong>{{ "%.1f"|format(alumno.promedio) if alumno.promedio is not none else "–" }}</strong> promedio</div>
+    <div class="kpi"><strong>{{ "%.1f"|format(alumno.asistencia) ~ " %" if alumno.asistencia is not none else "–" }}</strong> asistencia</div>
+  </div>
+</div>
+
+<div class="dos-columnas">
+  <section class="tarjeta">
+    <h2>Notas por asignatura</h2>
+    {% if notas %}
+    <table class="tabla compacta">
+      <thead><tr><th>Asignatura</th><th>Notas</th><th>Promedio</th></tr></thead>
+      <tbody>
+        {% for asig, lista in notas.items() %}
+        <tr>
+          <td>{{ asig }}</td>
+          <td>{% for n in lista %}<span class="nota {{ 'roja' if n < 4 }}">{{ "%.1f"|format(n) }}</span>{% endfor %}</td>
+          <td class="num">{{ "%.1f"|format(lista|sum / lista|length) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="suave">Sin notas registradas.</p>{% endif %}
+  </section>
+
+  <section class="tarjeta">
+    <h2>Asistencia día a día</h2>
+    <p class="suave">Presente {{ alumno.conteo.P }} · Ausente {{ alumno.conteo.A }} · Justificado {{ alumno.conteo.J }}</p>
+    {% if asistencia %}
+    <div class="dias">
+      {% for r in asistencia %}<span class="dia estado-{{ r.estado }}" title="{{ estados[r.estado] }}">{{ r.fecha[8:10] }}-{{ r.fecha[5:7] }} {{ r.estado }}</span>{% endfor %}
+    </div>
+    {% else %}<p class="suave">Sin asistencia registrada.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}
