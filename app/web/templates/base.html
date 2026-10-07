@@ -21,7 +21,7 @@
         {% endif %}
       </nav>
       <div class="sesion">
-        <span>{{ usuario.nombre }} · <em>{{ {"directiva": "Directiva", "profesor": "Profesor jefe", "alumno": "Alumno"}[usuario.rol] }}</em></span>
+        <span>{{ usuario.nombre }} · <em>{{ NOMBRE_ROL[usuario.rol] }}</em></span>
         <form method="post" action="/logout"><button class="enlace">Cerrar sesión</button></form>
       </div>
     {% endif %}

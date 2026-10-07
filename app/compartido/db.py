@@ -101,6 +101,6 @@ def iniciar() -> None:
     """Se llama al arrancar la app: crea tablas y, si está vacía, carga datos de prueba."""
     crear_tablas()
     if esta_vacia():
-        from app.seed import cargar_datos_de_prueba
+        from app.compartido.seed import cargar_datos_de_prueba
 
         cargar_datos_de_prueba()

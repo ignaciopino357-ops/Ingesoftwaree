@@ -1,8 +1,8 @@
 """Datos de prueba para la demo.
 
 Uso:
-    python -m app.seed          -> carga datos solo si la base está vacía
-    python -m app.seed --reset  -> borra la base y la vuelve a crear
+    python -m app.compartido.seed          -> carga datos solo si la base está vacía
+    python -m app.compartido.seed --reset  -> borra la base y la vuelve a crear
 
 Todos los nombres son inventados. Los feriados son de ejemplo:
 la directiva debe revisarlos en el portal antes de usar el sistema.
@@ -11,9 +11,9 @@ import os
 import sys
 from datetime import date
 
-from app import db
-from app.auth import hashear_clave
-from app.calendario import dias_de_clases
+from app.compartido import db
+from app.seguridad.dominio import hashear_clave
+from app.academico.dominio import dias_de_clases
 
 SEMESTRE = (date(2026, 7, 27), date(2026, 12, 4))
 FERIADOS = [
