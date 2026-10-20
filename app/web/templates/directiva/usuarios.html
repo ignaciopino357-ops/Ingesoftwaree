@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block titulo %}Usuarios{% endblock %}
+{% block contenido %}
+<h1>Usuarios</h1>
+
+<section class="tarjeta">
+  <h2>Registrar alumno o profesor</h2>
+  <form method="post" action="/directiva/usuarios" class="formulario dos-campos" novalidate>
+    <label>Nombre completo
+      <input name="nombre" value="{{ valores.nombre }}" required class="{{ 'con-error' if errores.nombre }}">
+      {% if errores.nombre %}<span class="error-campo">{{ errores.nombre }}</span>{% endif %}
+    </label>
+    <label>Usuario para iniciar sesión
+      <input name="usuario" value="{{ valores.usuario }}" required autocomplete="off" class="{{ 'con-error' if errores.usuario }}">
+      {% if errores.usuario %}<span class="error-campo">{{ errores.usuario }}</span>{% endif %}
+    </label>
+    <label>Contraseña inicial
+      <input name="clave" type="password" required minlength="6" autocomplete="new-password" class="{{ 'con-error' if errores.clave }}">
+      {% if errores.clave %}<span class="error-campo">{{ errores.clave }}</span>{% else %}<span class="suave nota-pie">Mínimo 6 caracteres</span>{% endif %}
+    </label>
+    <label>Rol
+      <select name="rol" class="{{ 'con-error' if errores.rol }}">
+        <option value="alumno" {{ 'selected' if valores.rol == 'alumno' }}>Alumno</option>
+        <option value="profesor" {{ 'selected' if valores.rol == 'profesor' }}>Profesor</option>
+      </select>
+      {% if errores.rol %}<span class="error-campo">{{ errores.rol }}</span>{% endif %}
+    </label>
+    <label>Curso (solo alumnos, opcional)
+      <select name="curso_id">
+        <option value="">Sin curso por ahora</option>
+        {% for c in cursos %}<option value="{{ c.id }}" {{ 'selected' if valores.curso_id == c.id|string }}>{{ c.nombre }}</option>{% endfor %}
+      </select>
+    </label>
+    <div><button class="principal">Registrar</button></div>
+  </form>
+  <p class="suave nota-pie">La contraseña se guarda cifrada. Entréguela al usuario por un canal privado.</p>
+</section>
+
+<div class="dos-columnas">
+  <section class="tarjeta">
+    <h2>Profesores <span class="suave">({{ profesores|length }})</span></h2>
+    <table class="tabla compacta">
+      <thead><tr><th>Nombre</th><th>Usuario</th></tr></thead>
+      <tbody>
+        {% for p in profesores %}<tr><td>{{ p.nombre }}</td><td class="suave">{{ p.usuario }}</td></tr>
+        {% else %}<tr><td colspan="2" class="suave">No hay profesores registrados.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <section class="tarjeta">
+    <h2>Alumnos <span class="suave">({{ alumnos|length }})</span></h2>
+    <table class="tabla compacta">
+      <thead><tr><th>Nombre</th><th>Curso</th></tr></thead>
+      <tbody>
+        {% for a, curso in alumnos %}<tr><td>{{ a.nombre }}</td><td class="{{ 'suave' if not curso }}">{{ curso or "Sin curso" }}</td></tr>
+        {% else %}<tr><td colspan="2" class="suave">No hay alumnos registrados.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

@@ -50,8 +50,9 @@ class NotasFalsas(RepositorioNotas):
     def __init__(self): self.guardadas = None
     def asignaturas(self): return [{"id": 1, "nombre": "Lenguaje"}]
     def de_alumno(self, alumno_id): return {}
+    def de_alumno_hasta(self, alumno_id, hasta): return {}
     def de_asignatura(self, curso_id, asignatura_id): return {}
-    def guardar(self, asignatura_id, cambios): self.guardadas = cambios
+    def guardar(self, asignatura_id, cambios, fecha): self.guardadas = cambios
 
 
 class AsistenciaFalsa(RepositorioAsistencia):
@@ -147,6 +148,10 @@ class FuenteFalsa(FuenteAcademica):
     def alumnos(self, curso_id): return [(1, "Ana"), (2, "Emilia")]
     def notas(self, alumno_id): return {"Lenguaje": [6.0]} if alumno_id == 1 else {"Lenguaje": [3.0]}
     def conteo_asistencia(self, alumno_id): return {"P": 10, "A": 0, "J": 0} if alumno_id == 1 else {"P": 6, "A": 4, "J": 0}
+    def notas_hasta(self, alumno_id, hasta): return self.notas(alumno_id)
+    def registros_asistencia(self, alumno_id): return []
+    def semestre(self): return None, None
+    def cursos(self): return [(1, "3° Medio A", "Pedro Jara")]
 
 
 def test_curso_ordenado_con_mayor_riesgo_primero():

@@ -1,4 +1,6 @@
 """Módulo Seguridad · ADAPTADOR DE ENTRADA API: login con JWT y control de acceso por rol (RF01)."""
+from typing import Literal
+
 from fastapi import APIRouter, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
@@ -24,6 +26,13 @@ class TokenSalida(BaseModel):
     expira_en_minutos: int
     rol: Rol
     nombre: str
+
+
+class UsuarioEntrada(BaseModel):
+    nombre: str = Field(examples=["Nora Paz"])
+    usuario: str = Field(examples=["npaz"])
+    clave: str = Field(description="Mínimo 6 caracteres; se guarda cifrada", examples=["secreto1"])
+    rol: Literal["alumno", "profesor"]
 
 
 class UsuarioSalida(BaseModel):
@@ -60,3 +69,19 @@ def login(datos: LoginEntrada):
 def yo(usuario: Usuario = Depends(usuario_api)):
     """Datos del usuario dueño del token."""
     return UsuarioSalida(id=usuario.id, nombre=usuario.nombre, usuario=usuario.usuario, rol=usuario.rol)
+
+
+@router.get("/usuarios", response_model=list[UsuarioSalida], tags=["Usuarios"])
+def listar_usuarios(rol: Literal["alumno", "profesor"], usuario: Usuario = Depends(con_rol(Rol.DIRECTIVA))):
+    """HU-11: usuarios registrados de un rol."""
+    return [UsuarioSalida(id=u.id, nombre=u.nombre, usuario=u.usuario, rol=u.rol)
+            for u in contenedor.registrar_usuario.listar(Rol(rol))]
+
+
+@router.post("/usuarios", response_model=UsuarioSalida, status_code=201, tags=["Usuarios"], responses={
+    400: {"description": "Datos inválidos (detalle por campo en 'errores')"},
+    409: {"description": "El nombre de usuario ya existe"}})
+def registrar_usuario(datos: UsuarioEntrada, usuario: Usuario = Depends(con_rol(Rol.DIRECTIVA))):
+    """HU-11: la directiva registra un alumno o profesor. Para asignarle curso: POST /api/cursos/{id}/alumnos."""
+    nuevo = contenedor.registrar_usuario.ejecutar(datos.nombre, datos.usuario, datos.clave, datos.rol)
+    return UsuarioSalida(id=nuevo.id, nombre=nuevo.nombre, usuario=nuevo.usuario, rol=nuevo.rol)

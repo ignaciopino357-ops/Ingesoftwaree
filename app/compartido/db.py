@@ -36,11 +36,13 @@ CREATE TABLE IF NOT EXISTS asignaturas (
 );
 
 -- HU-05: una nota por alumno, asignatura y número de evaluación (1 a 6)
+-- HU-13: fecha = día en que se ingresó o cambió la nota (para el historial semanal)
 CREATE TABLE IF NOT EXISTS notas (
     alumno_id INTEGER NOT NULL REFERENCES usuarios(id),
     asignatura_id INTEGER NOT NULL REFERENCES asignaturas(id),
     numero INTEGER NOT NULL CHECK (numero BETWEEN 1 AND 6),
     nota REAL NOT NULL CHECK (nota BETWEEN 1.0 AND 7.0),
+    fecha TEXT,
     PRIMARY KEY (alumno_id, asignatura_id, numero)
 );
 
@@ -62,6 +64,25 @@ CREATE TABLE IF NOT EXISTS semestre (
 CREATE TABLE IF NOT EXISTS feriados (
     fecha TEXT PRIMARY KEY,
     nombre TEXT NOT NULL
+);
+
+-- HU-10 y HU-12: alertas para el profesor jefe.
+-- clave evita duplicados: misma alerta para el mismo alumno no se crea dos veces.
+CREATE TABLE IF NOT EXISTS alertas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    alumno_id INTEGER NOT NULL REFERENCES usuarios(id),
+    tipo TEXT NOT NULL CHECK (tipo IN ('riesgo_alto', 'ausencias')),
+    clave TEXT NOT NULL,
+    motivo TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    revisada INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (alumno_id, tipo, clave)
+);
+
+-- HU-10: último estado de riesgo conocido, para alertar solo cuando cambia a Alto
+CREATE TABLE IF NOT EXISTS ultimo_riesgo (
+    alumno_id INTEGER PRIMARY KEY REFERENCES usuarios(id),
+    estado TEXT NOT NULL
 );
 """
 
@@ -90,6 +111,10 @@ def conexion():
 def crear_tablas() -> None:
     with conexion() as conn:
         conn.executescript(ESQUEMA)
+        # Migración Sprint 3: las bases creadas antes no tienen la columna notas.fecha
+        columnas = {fila["name"] for fila in conn.execute("PRAGMA table_info(notas)")}
+        if "fecha" not in columnas:
+            conn.execute("ALTER TABLE notas ADD COLUMN fecha TEXT")
 
 
 def esta_vacia() -> bool:

@@ -1,9 +1,49 @@
 {% extends "base.html" %}
-{% block titulo %}Portal alumno{% endblock %}
+{% block titulo %}Mis notas{% endblock %}
 {% block contenido %}
-<section class="tarjeta">
-  <h1>Hola, {{ usuario.nombre.split(" ")[0] }}</h1>
-  <p>Pronto podrás ver aquí tus notas y tu asistencia.</p>
-  <p class="suave">Esta sección (HU-09) está planificada para el Sprint 3.</p>
-</section>
+<div class="encabezado">
+  <div>
+    <h1>Hola, {{ usuario.nombre.split(" ")[0] }}</h1>
+    <p class="suave">{{ datos.curso or "Aún no tienes curso asignado" }}</p>
+  </div>
+  <div class="resumen">
+    <div class="kpi"><strong>{{ "%.1f"|format(datos.porcentaje) ~ " %" if datos.porcentaje is not none else "–" }}</strong> asistencia</div>
+    <div class="kpi"><strong>{{ datos.conteo.A }}</strong> ausencias</div>
+    <div class="kpi"><strong>{{ datos.conteo.J }}</strong> justificadas</div>
+  </div>
+</div>
+
+<div class="dos-columnas">
+  <section class="tarjeta">
+    <h2>Mis notas</h2>
+    {% if datos.asignaturas %}
+    <table class="tabla compacta">
+      <thead><tr><th>Asignatura</th><th>Notas</th><th class="num">Promedio</th></tr></thead>
+      <tbody>
+        {% for a in datos.asignaturas %}
+        <tr>
+          <td>{{ a.nombre }}</td>
+          <td>{% for n in a.notas %}<span class="nota {{ 'roja' if n < 4 }}">{{ "%.1f"|format(n) }}</span>{% endfor %}</td>
+          <td class="num"><strong>{{ "%.1f"|format(a.promedio) }}</strong></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="suave">Aún no tienes notas registradas.</p>{% endif %}
+  </section>
+
+  <section class="tarjeta">
+    <h2>Mi asistencia</h2>
+    <p class="suave">Presente {{ datos.conteo.P }} · Ausente {{ datos.conteo.A }} · Justificado {{ datos.conteo.J }}
+      · <a href="/alumno/asistencia">Ver en calendario</a></p>
+    <h3>Días que falté</h3>
+    {% if datos.ausencias %}
+      <div class="dias">{% for f in datos.ausencias %}<span class="dia estado-A">{{ f[8:10] }}-{{ f[5:7] }}</span>{% endfor %}</div>
+    {% else %}<p class="suave">No tienes ausencias.</p>{% endif %}
+    <h3>Días justificados</h3>
+    {% if datos.justificadas %}
+      <div class="dias">{% for f in datos.justificadas %}<span class="dia estado-J">{{ f[8:10] }}-{{ f[5:7] }}</span>{% endfor %}</div>
+    {% else %}<p class="suave">No tienes días justificados.</p>{% endif %}
+  </section>
+</div>
 {% endblock %}

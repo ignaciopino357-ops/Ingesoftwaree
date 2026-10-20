@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Mi asistencia{% endblock %}
+{% block contenido %}
+<div class="encabezado">
+  <div>
+    <h1>Mi asistencia</h1>
+    <p class="suave">Presente {{ datos.conteo.P }} · Ausente {{ datos.conteo.A }} · Justificado {{ datos.conteo.J }}
+      {% if datos.porcentaje is not none %}· {{ "%.1f"|format(datos.porcentaje) }} % de asistencia{% endif %}</p>
+  </div>
+</div>
+
+<section class="tarjeta calendario-alumno">
+  <div class="nav-mes">
+    {% if cal.anterior %}<a href="?mes={{ cal.anterior[0] }}-{{ '%02d'|format(cal.anterior[1]) }}" aria-label="Mes anterior">←</a>{% else %}<span></span>{% endif %}
+    <h2>{{ cal.titulo }}</h2>
+    {% if cal.siguiente %}<a href="?mes={{ cal.siguiente[0] }}-{{ '%02d'|format(cal.siguiente[1]) }}" aria-label="Mes siguiente">→</a>{% else %}<span></span>{% endif %}
+  </div>
+  <table class="calendario">
+    <thead><tr>{% for d in ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"] %}<th>{{ d }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for semana in cal.semanas %}
+      <tr>
+        {% for celda in semana %}
+          {% if celda %}<td class="{{ celda.tipo }}" title="{{ celda.titulo }}">{{ celda.dia.day }}{% if celda.tipo in ["presente", "ausente", "justificado"] %}<small>{{ celda.titulo[0] }}</small>{% endif %}</td>
+          {% else %}<td></td>{% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="leyenda">
+    <span><i class="presente"></i>Presente</span>
+    <span><i class="ausente"></i>Ausente</span>
+    <span><i class="justificado"></i>Justificado</span>
+    <span><i class="sin-registro"></i>Sin registro</span>
+    <span><i class="sin-clases"></i>Sin clases (fin de semana, feriado o fuera del semestre)</span>
+  </div>
+  {% set feriados = [] %}
+  {% for semana in cal.semanas %}{% for c in semana %}{% if c and c.titulo.startswith("Es feriado") %}{% set _ = feriados.append(c) %}{% endif %}{% endfor %}{% endfor %}
+  {% if feriados %}
+  <p class="suave nota-pie">Feriados del mes: {% for c in feriados %}{{ c.dia.strftime("%d-%m") }} {{ c.titulo[12:] }}{{ ", " if not loop.last }}{% endfor %}</p>
+  {% endif %}
+</section>
+{% endblock %}

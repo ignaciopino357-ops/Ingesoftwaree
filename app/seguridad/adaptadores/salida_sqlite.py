@@ -27,3 +27,12 @@ class RepositorioUsuariosSQLite(RepositorioUsuarios):
                 "SELECT * FROM usuarios WHERE rol = ? ORDER BY nombre", (rol.value,)
             ).fetchall()
         return [_a_usuario(f) for f in filas]
+
+    def existe(self, usuario: str) -> bool:
+        with conexion() as conn:
+            return conn.execute("SELECT 1 FROM usuarios WHERE usuario = ?", (usuario,)).fetchone() is not None
+
+    def crear(self, nombre: str, usuario: str, clave_hash: str, rol: Rol) -> int:
+        with conexion() as conn:
+            return conn.execute("INSERT INTO usuarios (nombre, usuario, clave_hash, rol) VALUES (?, ?, ?, ?)",
+                                (nombre, usuario, clave_hash, rol.value)).lastrowid

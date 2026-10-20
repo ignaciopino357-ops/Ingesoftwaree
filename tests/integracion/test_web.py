@@ -72,8 +72,9 @@ def test_nota_invalida_no_guarda_nada(cliente):
     assert r.status_code == 400
     assert "Debe estar entre 1.0 y 7.0" in r.text
     # la nota 6,5 tampoco quedó guardada
-    alumno = cliente.get(f"/profesor/cursos/{curso}/alumnos/8")
-    assert "6.5" not in alumno.text
+    guardadas = cliente.get(f"/profesor/cursos/{curso}/notas?asignatura=1")
+    assert 'name="n_8_1" value="6.5"' not in guardadas.text
+    assert 'name="n_8_1" value="' in guardadas.text
 
 
 def test_guardar_notas_actualiza_riesgo(cliente):

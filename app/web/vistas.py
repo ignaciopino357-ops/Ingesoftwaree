@@ -20,6 +20,10 @@ def render(request: Request, plantilla: str, status_code: int = 200, **contexto)
     if "usuario" not in contexto:
         from app.seguridad.adaptadores.entrada_web import usuario_en_sesion
         contexto["usuario"] = usuario_en_sesion(request)
+    usuario = contexto["usuario"]
+    if usuario is not None and usuario.rol == "profesor" and "alertas_pendientes" not in contexto:
+        from app import contenedor  # HU-10: contador de alertas en el menú del profesor jefe
+        contexto["alertas_pendientes"] = len(contenedor.vigilar_riesgo.pendientes(usuario))
     contexto["aviso"] = request.session.pop("aviso", None)
     return templates.TemplateResponse(request, plantilla, contexto, status_code=status_code)
 

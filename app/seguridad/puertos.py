@@ -20,3 +20,11 @@ class RepositorioUsuarios(ABC):
     @abstractmethod
     def listar_por_rol(self, rol: Rol) -> list[Usuario]:
         ...
+
+    @abstractmethod
+    def existe(self, usuario: str) -> bool:
+        ...
+
+    @abstractmethod
+    def crear(self, nombre: str, usuario: str, clave_hash: str, rol: Rol) -> int:
+        """Guarda el usuario y devuelve su id (HU-11)."""

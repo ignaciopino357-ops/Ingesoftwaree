@@ -16,14 +16,26 @@
   </div>
 </div>
 
-{% if not alumnos %}
+{% if alertas_pendientes %}
+  <p class="aviso alerta">Tiene {{ alertas_pendientes }} alerta(s) sin revisar. <a href="/profesor/alertas">Ver alertas</a></p>
+{% endif %}
+
+{% if not total %}
   <div class="tarjeta"><p>Este curso aún no tiene alumnos asignados. Contacte a la directiva.</p></div>
 {% else %}
-  <div class="resumen">
-    {% for nivel, n in conteo.items() %}
-      <div class="kpi"><span class="punto {{ nivel|lower|replace(' ', '-') }}"></span><strong>{{ n }}</strong> {{ nivel }}</div>
+  <form method="get" class="filtro-riesgo" aria-label="Filtrar por estado de riesgo">
+    <input type="hidden" name="orden" value="{{ orden }}">
+    <span class="suave">Mostrar:</span>
+    {% for nivel in estados_riesgo %}
+      <label class="chip {{ 'marcado' if nivel in ver }}">
+        <input type="checkbox" name="ver" value="{{ nivel }}" {{ 'checked' if nivel in ver }} onchange="this.form.submit()">
+        <span class="punto {{ nivel|lower|replace(' ', '-') }}"></span>{{ nivel }} <strong>{{ conteo[nivel] }}</strong>
+      </label>
     {% endfor %}
-  </div>
+    <noscript><button>Filtrar</button></noscript>
+    {% if ver %}<a href="?orden={{ orden }}">Ver todos</a>{% endif %}
+  </form>
+  <p class="suave" role="status">Mostrando {{ alumnos|length }} de {{ total }} alumnos{% if ver %} ({{ ver|join(", ") }}){% endif %}.</p>
   {% if not hay_notas and not hay_asistencia %}
     <p class="aviso info">Este curso aún no tiene notas ni asistencia ingresadas.</p>
   {% endif %}
@@ -32,7 +44,7 @@
     <thead>
       <tr>
         {% for col, texto in [("nombre", "Alumno"), ("promedio", "Promedio"), ("asistencia", "% Asistencia"), ("riesgo", "Estado")] %}
-          <th><a href="?orden={{ col }}" class="{{ 'activo' if orden == col }}">{{ texto }}{% if orden == col %} ↓{% endif %}</a></th>
+          <th><a href="?orden={{ col }}{% for v in ver %}&amp;ver={{ v|urlencode }}{% endfor %}" class="{{ 'activo' if orden == col }}">{{ texto }}{% if orden == col %} ↓{% endif %}</a></th>
         {% endfor %}
         <th>Motivo</th>
       </tr>
@@ -46,6 +58,8 @@
         <td><span class="punto {{ a.riesgo|lower|replace(' ', '-') }}"></span>{{ a.riesgo }}</td>
         <td class="suave">{{ a.motivo }}</td>
       </tr>
+      {% else %}
+      <tr><td colspan="5" class="suave">Ningún alumno con ese estado.</td></tr>
       {% endfor %}
     </tbody>
   </table>

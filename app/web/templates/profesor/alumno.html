@@ -42,4 +42,40 @@
     {% else %}<p class="suave">Sin asistencia registrada.</p>{% endif %}
   </section>
 </div>
+
+<section class="tarjeta">
+  <h2>Historial de riesgo por semana</h2>
+  {% if semanas %}
+  <p class="suave">Valores acumulados al cierre de cada semana del semestre. La línea punteada es el umbral.</p>
+  <div class="graficos">
+    {% for titulo, g in [("% de asistencia", grafico_asistencia), ("Promedio general", grafico_promedio)] %}
+    <figure class="grafico">
+      <figcaption>{{ titulo }}</figcaption>
+      <svg viewBox="0 0 {{ g.ancho }} {{ g.alto }}" role="img" aria-label="{{ titulo }} por semana">
+        {% for e in g.eje_y %}<text x="{{ g.izq - 6 }}" y="{{ e.y + 4 }}" class="eje" text-anchor="end">{{ e.texto }}</text>{% endfor %}
+        <line x1="{{ g.izq }}" x2="{{ g.der }}" y1="{{ g.base }}" y2="{{ g.base }}" class="base"/>
+        <line x1="{{ g.izq }}" x2="{{ g.der }}" y1="{{ g.umbral.y }}" y2="{{ g.umbral.y }}" class="umbral"/>
+        <text x="{{ g.der }}" y="{{ g.umbral.y - 5 }}" class="eje" text-anchor="end">umbral {{ g.umbral.texto }}</text>
+        {% if g.puntos|length > 1 %}<polyline points="{{ g.polilinea }}" class="serie"/>{% endif %}
+        {% for p in g.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" class="punto-serie"><title>Semana del {{ p.semana }}: {{ p.texto }}</title></circle>{% endfor %}
+        {% for m in g.marcas %}<text x="{{ m.x }}" y="{{ g.alto - 8 }}" class="eje" text-anchor="middle">{{ m.texto }}</text>{% endfor %}
+      </svg>
+    </figure>
+    {% endfor %}
+  </div>
+  <table class="tabla compacta">
+    <thead><tr><th>Semana</th><th class="num">% Asistencia</th><th class="num">Promedio</th><th>Estado</th></tr></thead>
+    <tbody>
+      {% for s in semanas|reverse %}
+      <tr>
+        <td>{{ s.lunes.strftime("%d-%m") }} al {{ s.domingo.strftime("%d-%m") }}</td>
+        <td class="num">{{ "%.1f"|format(s.asistencia) ~ " %" if s.asistencia is not none else "–" }}</td>
+        <td class="num">{{ "%.1f"|format(s.promedio) if s.promedio is not none else "–" }}</td>
+        <td><span class="punto {{ s.riesgo|lower|replace(' ', '-') }}"></span>{{ s.riesgo }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p class="suave">Aún no hay semanas del semestre para mostrar.</p>{% endif %}
+</section>
 {% endblock %}

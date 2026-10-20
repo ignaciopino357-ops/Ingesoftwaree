@@ -9,7 +9,8 @@ from typing import Optional
 from app.academico import dominio
 from app.academico.dominio import Alumno, Curso, EstadoAsistencia
 from app.academico.puertos import (
-    ExportadorPlanillas, RepositorioAsistencia, RepositorioCalendario, RepositorioCursos, RepositorioNotas,
+    ExportadorPlanillas, ObservadorCambios, RepositorioAsistencia, RepositorioCalendario, RepositorioCursos,
+    RepositorioNotas,
 )
 from app.compartido.errores import Conflicto, DatosInvalidos, NoEncontrado, SinPermiso
 from app.seguridad.dominio import Rol, Usuario
@@ -68,15 +69,19 @@ class ConsultarNotas:
 class RegistrarNotas:
     """Valida todas las notas y guarda solo si no hay errores (HU-05, criterio 2)."""
 
-    def __init__(self, cursos: RepositorioCursos, notas: RepositorioNotas):
+    def __init__(self, cursos: RepositorioCursos, notas: RepositorioNotas,
+                 observador: Optional[ObservadorCambios] = None):
         self.cursos = cursos
         self.notas = notas
+        self.observador = observador
 
-    def ejecutar(self, curso_id: int, asignatura_id: int, entradas: list[tuple[int, int, object]]) -> int:
+    def ejecutar(self, curso_id: int, asignatura_id: int, entradas: list[tuple[int, int, object]],
+                 hoy: Optional[date] = None) -> int:
         """entradas = [(alumno_id, numero, valor)]; valor vacío o None = borrar la nota.
 
-        Devuelve cuántas notas quedaron guardadas.
+        Devuelve cuántas notas quedaron guardadas. Después avisa al observador (alertas HU-10).
         """
+        hoy = hoy or date.today()
         if asignatura_id not in {a["id"] for a in self.notas.asignaturas()}:
             raise NoEncontrado("La asignatura no existe")
         del_curso = {a.id for a in self.cursos.alumnos(curso_id)}
@@ -99,7 +104,9 @@ class RegistrarNotas:
                 f"No se guardó: hay {len(errores)} nota(s) inválida(s). Deben estar entre 1.0 y 7.0.",
                 detalles=errores,
             )
-        self.notas.guardar(asignatura_id, cambios)
+        self.notas.guardar(asignatura_id, cambios, hoy)
+        if self.observador:
+            self.observador.datos_actualizados(curso_id, hoy)
         return sum(1 for c in cambios if c[2] is not None)
 
 
@@ -107,10 +114,11 @@ class RegistrarNotas:
 
 class PasarLista:
     def __init__(self, cursos: RepositorioCursos, asistencia: RepositorioAsistencia,
-                 calendario: RepositorioCalendario):
+                 calendario: RepositorioCalendario, observador: Optional[ObservadorCambios] = None):
         self.cursos = cursos
         self.asistencia = asistencia
         self.calendario = calendario
+        self.observador = observador
 
     def bloqueo(self, dia: date, hoy: date) -> Optional[str]:
         inicio, fin = self.calendario.semestre()
@@ -133,6 +141,8 @@ class PasarLista:
         except ValueError:
             raise DatosInvalidos("El estado debe ser P, A o J")
         self.asistencia.guardar(dia, limpios)
+        if self.observador:
+            self.observador.datos_actualizados(curso_id, hoy)  # alertas HU-10 y HU-12
         return len(limpios)
 
 
@@ -145,6 +155,89 @@ class ConsultarAsistencia:
 
     def conteo(self, alumno_id: int) -> dict:
         return self.asistencia.conteo(alumno_id)
+
+
+# ---------- HU-09: portal alumno (solo sus propios datos, sin riesgo) ----------
+
+class ConsultarMisDatos:
+    """El alumno ve sus notas y su asistencia. Nunca recibe datos de otros ni el estado de riesgo."""
+
+    def __init__(self, cursos: RepositorioCursos, notas: RepositorioNotas, asistencia: RepositorioAsistencia):
+        self.cursos = cursos
+        self.notas = notas
+        self.asistencia = asistencia
+
+    def ejecutar(self, alumno: Usuario) -> dict:
+        if alumno.rol != Rol.ALUMNO:
+            raise SinPermiso("Esta sección es solo para alumnos")
+        conteo = self.asistencia.conteo(alumno.id)
+        registros = self.asistencia.de_alumno(alumno.id)
+        return {
+            "curso": self.cursos.curso_de_alumno(alumno.id),
+            "asignaturas": [{"nombre": nombre, "notas": lista, "promedio": dominio.promedio(lista)}
+                            for nombre, lista in self.notas.de_alumno(alumno.id).items()],
+            "conteo": conteo,
+            "porcentaje": dominio.porcentaje_asistencia(conteo["P"], conteo["A"], conteo["J"]),
+            "ausencias": [f for f, e in registros if e == "A"],
+            "justificadas": [f for f, e in registros if e == "J"],
+        }
+
+
+# ---------- HU-16: mi asistencia en calendario ----------
+
+COLOR_ESTADO = {"P": "presente", "A": "ausente", "J": "justificado"}
+
+
+class ConsultarMiCalendario:
+    def __init__(self, calendario: RepositorioCalendario, asistencia: RepositorioAsistencia):
+        self.calendario = calendario
+        self.asistencia = asistencia
+
+    def meses_del_semestre(self, hoy: date) -> list[tuple[int, int]]:
+        inicio, fin = self.calendario.semestre()
+        if not inicio:
+            return [(hoy.year, hoy.month)]
+        meses, actual = [], (inicio.year, inicio.month)
+        while actual <= (fin.year, fin.month):
+            meses.append(actual)
+            actual = dominio.mes_siguiente(*actual, 1)
+        return meses
+
+    def ejecutar(self, alumno: Usuario, anio: int, mes: int, hoy: date) -> dict:
+        """Mes pintado con P/A/J. Si piden un mes fuera del semestre, se muestra el más cercano."""
+        if alumno.rol != Rol.ALUMNO:
+            raise SinPermiso("Esta sección es solo para alumnos")
+        meses = self.meses_del_semestre(hoy)
+        if (anio, mes) not in meses:
+            anio, mes = min(max((anio, mes), meses[0]), meses[-1])
+        inicio, fin = self.calendario.semestre()
+        feriados = self.calendario.feriados()
+        estados = dict(self.asistencia.de_alumno(alumno.id))
+        semanas = []
+        for semana in dominio.semanas_del_mes(anio, mes):
+            fila = []
+            for dia in semana:
+                if dia is None:
+                    fila.append(None)
+                    continue
+                motivo = dominio.motivo_no_clases(dia, inicio, fin, feriados)
+                estado = estados.get(dia.isoformat())
+                if motivo:
+                    fila.append({"dia": dia, "tipo": "sin-clases", "titulo": motivo})
+                elif estado:
+                    fila.append({"dia": dia, "tipo": COLOR_ESTADO[estado],
+                                 "titulo": EstadoAsistencia(estado).texto})
+                elif dia > hoy:
+                    fila.append({"dia": dia, "tipo": "futuro", "titulo": "Día de clases (aún no llega)"})
+                else:
+                    fila.append({"dia": dia, "tipo": "sin-registro", "titulo": "Sin registro"})
+            semanas.append(fila)
+        posicion = meses.index((anio, mes))
+        return {
+            "anio": anio, "mes": mes, "titulo": f"{dominio.NOMBRES_MES[mes - 1]} {anio}", "semanas": semanas,
+            "anterior": meses[posicion - 1] if posicion > 0 else None,
+            "siguiente": meses[posicion + 1] if posicion < len(meses) - 1 else None,
+        }
 
 
 # ---------- HU-02: cursos (directiva) ----------

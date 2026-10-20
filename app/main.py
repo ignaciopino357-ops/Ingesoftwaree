@@ -18,12 +18,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.academico.adaptadores import entrada_api as api_academico
-from app.academico.adaptadores import entrada_web_directiva, entrada_web_profesor
+from app.academico.adaptadores import entrada_web_alumno, entrada_web_directiva, entrada_web_profesor
 from app.compartido import db
 from app.compartido.errores import ErrorDeNegocio, NoAutenticado
 from app.riesgo.adaptadores import entrada_api as api_riesgo
 from app.seguridad.adaptadores import entrada_api as api_seguridad
-from app.seguridad.adaptadores import entrada_web, entrada_web_alumno
+from app.seguridad.adaptadores import entrada_web
 from app.web.vistas import ir_a, render
 
 
@@ -36,7 +36,7 @@ async def ciclo_de_vida(app: FastAPI):
 app = FastAPI(
     title="Seguimiento de trayectorias y riesgo de deserción",
     description="API REST del monolito modular hexagonal. Use POST /api/login y luego el botón Authorize.",
-    version="2.0",
+    version="3.0",
     lifespan=ciclo_de_vida,
 )
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "cambiar-en-produccion"))
