@@ -61,10 +61,27 @@ def validar_nota(valor) -> float:
     return nota
 
 
+def promedio(notas: list) -> Optional[float]:
+    """Promedio simple redondeado a 1 decimal (None si no hay notas)."""
+    return round(sum(notas) / len(notas), 1) if notas else None
+
+
 def validar_numero_evaluacion(numero: int) -> int:
     if not 1 <= numero <= NUM_EVALUACIONES:
         raise ValueError(f"La evaluación debe ser de 1 a {NUM_EVALUACIONES}")
     return numero
+
+
+# ---------- Asistencia (HU-06 / HU-09) ----------
+
+def porcentaje_asistencia(presentes: int, ausentes: int, justificados: int) -> Optional[float]:
+    """% de asistencia = (Presente + Justificado) / días registrados. Una falta justificada no suma riesgo."""
+    if min(presentes, ausentes, justificados) < 0:
+        raise ValueError("Los conteos de asistencia no pueden ser negativos")
+    total = presentes + ausentes + justificados
+    if total == 0:
+        return None
+    return round((presentes + justificados) * 100 / total, 1)
 
 
 # ---------- Calendario (HU-03) ----------
@@ -110,6 +127,12 @@ def motivo_bloqueo_asistencia(dia: date, hoy: date, inicio, fin, feriados: dict)
     if dia > hoy:
         return "No se puede registrar asistencia de un día futuro"
     return motivo_no_clases(dia, inicio, fin, feriados)
+
+
+def mes_siguiente(anio: int, mes: int, paso: int) -> tuple[int, int]:
+    """Suma (o resta) meses: mes_siguiente(2026, 12, 1) == (2027, 1)."""
+    total = anio * 12 + (mes - 1) + paso
+    return total // 12, total % 12 + 1
 
 
 def semanas_del_mes(anio: int, mes: int) -> list:

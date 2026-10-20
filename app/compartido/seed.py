@@ -44,6 +44,10 @@ ALUMNOS = [
 ]
 
 DESVIOS = [-0.4, 0.3, 0.1]  # se suman a la nota base para tener 3 evaluaciones distintas
+FECHAS_EVALUACION = [date(2026, 9, 4), date(2026, 9, 25), date(2026, 10, 2)]  # para el historial (HU-13)
+ULTIMO_DIA = date(2026, 10, 6)
+# HU-12: Camila falta los 3 últimos días de clases seguidos, para ver la alerta en la demo
+RACHA_DEMO = ("alumno3", [date(2026, 10, 2), date(2026, 10, 5), date(2026, 10, 6)])
 
 
 def cargar_datos_de_prueba() -> None:
@@ -77,7 +81,7 @@ def cargar_datos_de_prueba() -> None:
                          [(f.isoformat(), n) for f, n in FERIADOS])
 
         # Asistencia ya registrada: días de clases del 1 de septiembre al 6 de octubre
-        dias = dias_de_clases(date(2026, 9, 1), date(2026, 10, 6), [f for f, _ in FERIADOS])
+        dias = dias_de_clases(date(2026, 9, 1), ULTIMO_DIA, [f for f, _ in FERIADOS])
 
         for i, (usuario, nombre, curso, ausencia, base) in enumerate(ALUMNOS, start=1):
             alumno_id = crear_usuario(usuario, nombre, "alumno", "alumno123")
@@ -94,15 +98,23 @@ def cargar_datos_de_prueba() -> None:
                     estado = "J" if faltas % 3 == 0 else "A"
                 else:
                     estado = "P"
+                if usuario == RACHA_DEMO[0] and dia in RACHA_DEMO[1]:
+                    estado = "A"
                 conn.execute("INSERT INTO asistencia (alumno_id, fecha, estado) VALUES (?, ?, ?)",
                              (alumno_id, dia.isoformat(), estado))
             for a, asig_id in enumerate(asignaturas):
-                for numero, desvio in enumerate(DESVIOS, start=1):
+                for numero, (desvio, fecha) in enumerate(zip(DESVIOS, FECHAS_EVALUACION), start=1):
                     nota = round(min(7.0, max(1.0, base + desvio + (a - 2) * 0.1)), 1)
                     conn.execute(
-                        "INSERT INTO notas (alumno_id, asignatura_id, numero, nota) VALUES (?, ?, ?, ?)",
-                        (alumno_id, asig_id, numero, nota),
+                        "INSERT INTO notas (alumno_id, asignatura_id, numero, nota, fecha) VALUES (?, ?, ?, ?, ?)",
+                        (alumno_id, asig_id, numero, nota, fecha.isoformat()),
                     )
+
+    # Alertas iniciales (HU-10 y HU-12) calculadas con el mismo caso de uso que usa la app
+    from app import contenedor
+
+    for curso in contenedor.cursos.listar():
+        contenedor.vigilar_riesgo.revisar_curso(curso.id, ULTIMO_DIA)
 
 
 if __name__ == "__main__":

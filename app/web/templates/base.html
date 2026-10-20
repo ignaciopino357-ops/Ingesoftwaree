@@ -13,11 +13,15 @@
       <nav>
         {% if usuario.rol == "directiva" %}
           <a href="/directiva">Cursos</a>
+          <a href="/directiva/usuarios">Usuarios</a>
+          <a href="/directiva/riesgo">Riesgo por curso</a>
           <a href="/directiva/calendario">Calendario</a>
         {% elif usuario.rol == "profesor" %}
           <a href="/profesor">Mi curso</a>
+          <a href="/profesor/alertas">Alertas{% if alertas_pendientes %} <span class="contador" aria-label="{{ alertas_pendientes }} pendientes">{{ alertas_pendientes }}</span>{% endif %}</a>
         {% elif usuario.rol == "alumno" %}
           <a href="/alumno">Mis notas</a>
+          <a href="/alumno/asistencia">Mi asistencia</a>
         {% endif %}
       </nav>
       <div class="sesion">

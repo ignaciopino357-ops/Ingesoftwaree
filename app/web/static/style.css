@@ -107,3 +107,58 @@ input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--borde)
   .tabla th, .tabla td { padding: 8px 6px; }
 }
 .filtros label { display: inline-grid; min-width: 220px; }
+
+/* ---------- Sprint 3 ---------- */
+h3 { font-size: 1rem; margin: 16px 0 8px; }
+
+/* HU-10: contador de alertas en el menú y aviso en el curso */
+.contador { display: inline-block; min-width: 1.4em; padding: 0 6px; border-radius: 999px; background: #fff; color: var(--primario); font-size: .8rem; font-weight: 700; text-align: center; }
+.aviso.alerta { background: #fdf0ee; border-left: 4px solid var(--alto); }
+.etiqueta { display: inline-block; font-size: .8rem; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.etiqueta.riesgo_alto { background: #fbe1dc; }
+.etiqueta.ausencias { background: #fff1d1; }
+
+/* HU-14: filtro por color */
+.filtro-riesgo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 16px 0 4px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border: 1px solid var(--borde); border-radius: 999px; background: var(--superficie); color: var(--texto); cursor: pointer; font-size: .9rem; }
+.chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chip.marcado { border-color: var(--primario); background: var(--primario-claro); }
+.chip:focus-within { outline: 2px solid var(--primario); outline-offset: 2px; }
+
+/* HU-11: formulario de usuarios */
+.formulario.dos-campos { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: start; }
+.formulario.dos-campos > div { align-self: end; }
+.error-campo { color: var(--error); font-size: .85rem; }
+
+/* HU-13: gráficos del historial */
+.graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 8px 0 12px; }
+.grafico { margin: 0; }
+.grafico figcaption { font-size: .9rem; font-weight: 600; margin-bottom: 4px; }
+.grafico svg { width: 100%; height: auto; display: block; }
+.grafico .eje { font-size: 15px; fill: var(--suave); }
+.grafico .base { stroke: var(--borde); }
+.grafico .umbral { stroke: var(--alto); stroke-dasharray: 5 4; stroke-width: 1.5; }
+.grafico .serie { fill: none; stroke: var(--primario); stroke-width: 2.5; stroke-linejoin: round; }
+.grafico .punto-serie { fill: var(--primario); stroke: #fff; stroke-width: 1.5; }
+
+/* HU-15: barra apilada por curso */
+.col-barra { width: 30%; min-width: 140px; }
+.barra-apilada { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; background: #eef1f4; }
+.barra-apilada span.alto { background: var(--alto); }
+.barra-apilada span.medio { background: var(--medio); }
+.barra-apilada span.bajo { background: var(--bajo); }
+.barra-apilada span.sin-datos { background: var(--sin-datos); }
+
+/* HU-16: calendario del alumno */
+.calendario-alumno { max-width: 560px; }
+.calendario td small { display: block; font-size: .7rem; line-height: 1; opacity: .75; }
+.calendario .presente, .leyenda .presente { background: var(--bajo); }
+.calendario .ausente, .leyenda .ausente { background: var(--alto); }
+.calendario .justificado, .leyenda .justificado { background: var(--medio); }
+.calendario .sin-registro, .leyenda .sin-registro { background: var(--superficie); border: 1px dashed var(--borde); }
+.calendario .sin-clases, .leyenda .sin-clases { background: #eef1f4; color: var(--suave); }
+
+@media (max-width: 640px) {
+  .col-barra { display: none; }
+}
+.calendario .futuro { color: var(--suave); }

@@ -1,6 +1,7 @@
 """Módulo Gestión Académica · ADAPTADOR DE ENTRADA WEB: portal de la directiva (Controlador del MVC).
 
 HU-02 asignar alumnos y profesor jefe · HU-03 calendario del semestre
+HU-11 registrar alumnos y profesores · HU-15 resumen de riesgo por curso
 """
 from datetime import date
 
@@ -10,7 +11,7 @@ from app import contenedor
 from app.academico.dominio import NOMBRES_MES
 from app.compartido.errores import ErrorDeNegocio, NoEncontrado
 from app.seguridad.adaptadores.entrada_web import usuario_web
-from app.seguridad.dominio import Rol
+from app.seguridad.dominio import NOMBRE_ROL, Rol
 from app.web.vistas import avisar, ir_a, render
 
 router = APIRouter(prefix="/directiva", include_in_schema=False)
@@ -98,6 +99,54 @@ def quitar_alumno(request: Request, curso_id: int, alumno_id: int):
     _ejecutar(request, lambda: contenedor.administrar_cursos.quitar_alumno(curso_id, alumno_id),
               "Alumno quitado del curso. Sus notas y asistencia se conservan.")
     return ir_a(f"/directiva/cursos/{curso_id}")
+
+
+# ---------- HU-11: registrar usuarios ----------
+
+def _pantalla_usuarios(request, valores=None, errores=None, status_code=200):
+    alumnos = contenedor.administrar_cursos.todos_los_alumnos()
+    return render(
+        request, "directiva/usuarios.html", status_code=status_code,
+        valores=valores or {"rol": "alumno"}, errores=errores or {},
+        cursos=contenedor.cursos.listar(), profesores=contenedor.registrar_usuario.listar(Rol.PROFESOR),
+        alumnos=sorted(alumnos, key=lambda par: par[0].nombre),
+    )
+
+
+@router.get("/usuarios")
+def ver_usuarios(request: Request):
+    _directiva(request)
+    return _pantalla_usuarios(request)
+
+
+@router.post("/usuarios")
+async def registrar_usuario(request: Request):
+    _directiva(request)
+    form = await request.form()
+    valores = {campo: (form.get(campo) or "") for campo in ("nombre", "usuario", "rol", "curso_id")}
+    try:
+        nuevo = contenedor.registrar_usuario.ejecutar(valores["nombre"], valores["usuario"],
+                                                      form.get("clave") or "", valores["rol"])
+    except ErrorDeNegocio as error:
+        avisar(request, error.mensaje, "error")
+        return _pantalla_usuarios(request, valores, error.detalles, status_code=error.codigo_http)
+    mensaje = f"{NOMBRE_ROL[nuevo.rol]} {nuevo.nombre} registrado. Ya puede iniciar sesión como {nuevo.usuario}."
+    if nuevo.rol == Rol.ALUMNO and valores["curso_id"]:
+        try:
+            contenedor.administrar_cursos.agregar_alumno(int(valores["curso_id"]), nuevo.id)
+            mensaje += f" Quedó en {contenedor.cursos.curso_de_alumno(nuevo.id)}."
+        except (ErrorDeNegocio, ValueError):
+            mensaje += " No se pudo asignar el curso: asígnelo desde Cursos."
+    avisar(request, mensaje)
+    return ir_a("/directiva/usuarios")
+
+
+# ---------- HU-15: resumen de riesgo por curso ----------
+
+@router.get("/riesgo")
+def ver_resumen_riesgo(request: Request):
+    usuario = _directiva(request)
+    return render(request, "directiva/riesgo.html", resumen=contenedor.resumen_riesgo.ejecutar(usuario))
 
 
 # ---------- HU-03 ----------

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Alertas{% endblock %}
+{% block contenido %}
+<h1>Alertas</h1>
+<p class="suave">Se crean solas al guardar notas o asistencia: cuando un alumno pasa a riesgo Alto
+  o falta 3 días de clases seguidos. Marque cada una como revisada cuando la haya atendido.</p>
+
+{% if alertas %}
+<table class="tabla">
+  <thead><tr><th>Fecha</th><th>Alumno</th><th>Curso</th><th>Alerta</th><th>Detalle</th><th></th></tr></thead>
+  <tbody>
+    {% for a in alertas %}
+    <tr>
+      <td>{{ a.fecha.strftime("%d-%m-%Y") }}</td>
+      <td><a href="/profesor/cursos/{{ a.curso_id }}/alumnos/{{ a.alumno_id }}">{{ a.alumno }}</a></td>
+      <td>{{ a.curso }}</td>
+      <td><span class="etiqueta {{ a.tipo }}">{{ a.titulo }}</span></td>
+      <td class="suave">{{ a.motivo }}</td>
+      <td class="derecha">
+        <form method="post" action="/profesor/alertas/{{ a.id }}/revisar"><button>Marcar revisada</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="tarjeta"><p>No hay alertas pendientes.</p></div>
+{% endif %}
+{% endblock %}

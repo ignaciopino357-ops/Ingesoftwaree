@@ -55,12 +55,22 @@ class RepositorioNotas(ABC):
         """{nombre_asignatura: [notas en orden]}"""
 
     @abstractmethod
+    def de_alumno_hasta(self, alumno_id: int, hasta: date) -> dict:
+        """Igual que de_alumno, pero solo las notas ingresadas hasta esa fecha (HU-13).
+
+        Las notas sin fecha (cargadas antes del Sprint 3) cuentan siempre.
+        """
+
+    @abstractmethod
     def de_asignatura(self, curso_id: int, asignatura_id: int) -> dict:
         """{alumno_id: {numero: nota}}"""
 
     @abstractmethod
-    def guardar(self, asignatura_id: int, cambios: list[tuple[int, int, Optional[float]]]) -> None:
-        """Cambios (alumno_id, numero, nota). Nota None = borrar. Todo en una transacción."""
+    def guardar(self, asignatura_id: int, cambios: list[tuple[int, int, Optional[float]]], fecha: date) -> None:
+        """Cambios (alumno_id, numero, nota). Nota None = borrar. Todo en una transacción.
+
+        `fecha` queda registrada en las notas nuevas o que cambiaron de valor.
+        """
 
 
 class RepositorioAsistencia(ABC):
@@ -110,3 +120,14 @@ class ExportadorPlanillas(ABC):
     @abstractmethod
     def asistencia(self, alumnos: list[Alumno], fechas: list[str], registros: dict, conteos: dict) -> bytes:
         """registros = {alumno_id: {fecha: estado}}, conteos = {alumno_id: {"P","A","J"}}"""
+
+
+class ObservadorCambios(ABC):
+    """Aviso de que cambiaron las notas o la asistencia de un curso.
+
+    Gestión Académica no conoce al Motor de Riesgo: solo avisa por este puerto.
+    En app/contenedor.py se conecta con el adaptador que revisa las alertas (HU-10 y HU-12).
+    """
+
+    @abstractmethod
+    def datos_actualizados(self, curso_id: int, hoy: date) -> None: ...

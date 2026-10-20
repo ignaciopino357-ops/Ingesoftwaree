@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titulo %}Riesgo por curso{% endblock %}
+{% block contenido %}
+<h1>Riesgo por curso</h1>
+<p class="suave">Cantidad de alumnos por estado de riesgo. No se muestran nombres, notas ni asistencia individual.</p>
+
+<div class="resumen">
+  <div class="kpi"><strong>{{ resumen.alumnos }}</strong> alumnos en cursos</div>
+  <div class="kpi"><span class="punto alto"></span><strong>{{ resumen.total["Alto"] }}</strong> en riesgo Alto
+    {% if resumen.porcentaje_alto is not none %}<span class="suave">({{ "%.1f"|format(resumen.porcentaje_alto) }} %)</span>{% endif %}</div>
+  <div class="kpi"><span class="punto medio"></span><strong>{{ resumen.total["Medio"] }}</strong> Medio</div>
+  <div class="kpi"><span class="punto bajo"></span><strong>{{ resumen.total["Bajo"] }}</strong> Bajo</div>
+  <div class="kpi"><span class="punto sin-datos"></span><strong>{{ resumen.total["Sin datos"] }}</strong> Sin datos</div>
+</div>
+
+<table class="tabla">
+  <thead>
+    <tr><th>Curso</th><th>Profesor jefe</th><th class="num">Alto</th><th class="num">Medio</th><th class="num">Bajo</th>
+        <th class="num">Sin datos</th><th class="num">Total</th><th class="col-barra">Distribución</th></tr>
+  </thead>
+  <tbody>
+    {% for c in resumen.cursos %}
+    <tr>
+      <td>{{ c.nombre }}</td>
+      <td>{{ c.profesor or "Sin asignar" }}</td>
+      {% for nivel in ["Alto", "Medio", "Bajo", "Sin datos"] %}<td class="num">{{ c.conteo[nivel] }}</td>{% endfor %}
+      <td class="num">{{ c.alumnos }}</td>
+      <td class="col-barra">
+        {% if c.alumnos %}
+        <div class="barra-apilada" role="img" aria-label="Alto {{ c.conteo['Alto'] }}, Medio {{ c.conteo['Medio'] }}, Bajo {{ c.conteo['Bajo'] }}, Sin datos {{ c.conteo['Sin datos'] }}">
+          {% for nivel in ["Alto", "Medio", "Bajo", "Sin datos"] %}{% if c.conteo[nivel] %}<span class="{{ nivel|lower|replace(' ', '-') }}" style="flex: {{ c.conteo[nivel] }}" title="{{ nivel }}: {{ c.conteo[nivel] }}"></span>{% endif %}{% endfor %}
+        </div>
+        {% else %}<span class="suave">Sin alumnos</span>{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="suave">Aún no hay cursos creados.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p class="suave nota-pie">Regla: Bajo si asistencia ≥ 85 % y promedio ≥ 4.0 · Medio si falla una · Alto si fallan ambas.</p>
+{% endblock %}

@@ -2,24 +2,28 @@
 
 Solo traduce HTTP <-> casos de uso. No contiene reglas de negocio ni SQL.
 HU-04 ver curso · HU-05 notas · HU-06 pasar lista · HU-08 exportar
+HU-10/HU-12 alertas · HU-13 historial de riesgo · HU-14 filtrar por color
 """
 import re
 import unicodedata
 from datetime import date
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import Response
 
 from app import contenedor
 from app.academico.dominio import NUM_EVALUACIONES, EstadoAsistencia
 from app.compartido.errores import DatosInvalidos, NoEncontrado
 from app.seguridad.adaptadores.entrada_web import usuario_web
+from app.riesgo.dominio import UMBRAL_ASISTENCIA, UMBRAL_PROMEDIO
 from app.seguridad.dominio import Rol
+from app.web import graficos
 from app.web.vistas import avisar, ir_a, render
 
 router = APIRouter(prefix="/profesor", include_in_schema=False)
 
 ESTADOS = {e.value: e.texto for e in EstadoAsistencia}
+ESTADOS_RIESGO = ["Alto", "Medio", "Bajo", "Sin datos"]
 TIPO_EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
@@ -45,12 +49,14 @@ def portal(request: Request):
 
 
 @router.get("/cursos/{curso_id}")
-def ver_curso(request: Request, curso_id: int, orden: str = "riesgo"):
+def ver_curso(request: Request, curso_id: int, orden: str = "riesgo", ver: list[str] = Query(default=[])):
     curso = _curso(request, curso_id)
-    alumnos = contenedor.consultar_riesgo.ejecutar(curso_id, orden)
+    todos = contenedor.consultar_riesgo.ejecutar(curso_id, orden)
+    alumnos = contenedor.consultar_riesgo.filtrar(todos, ver)  # HU-14
     return render(
-        request, "profesor/curso.html", curso=curso, alumnos=alumnos, orden=orden,
-        conteo=contenedor.consultar_riesgo.conteo_por_estado(alumnos),
+        request, "profesor/curso.html", curso=curso, alumnos=alumnos, total=len(todos), orden=orden,
+        ver=[v for v in ver if v in ESTADOS_RIESGO], estados_riesgo=ESTADOS_RIESGO,
+        conteo=contenedor.consultar_riesgo.conteo_por_estado(todos),
         hay_notas=contenedor.exportar_curso.hay_notas(curso_id),
         hay_asistencia=contenedor.exportar_curso.hay_asistencia(curso_id),
     )
@@ -62,13 +68,34 @@ def ver_alumno(request: Request, curso_id: int, alumno_id: int):
     alumno = next((a for a in contenedor.acceder_curso.alumnos(curso_id) if a.id == alumno_id), None)
     if alumno is None:
         raise NoEncontrado("El alumno no pertenece a este curso")
+    semanas = contenedor.historial_riesgo.ejecutar(alumno_id, date.today())  # HU-13
     return render(
         request, "profesor/alumno.html", curso=curso,
         alumno=contenedor.consultar_riesgo.alumno(alumno.id, alumno.nombre),
         notas=contenedor.consultar_notas.de_alumno(alumno_id),
         asistencia=[{"fecha": f, "estado": e} for f, e in contenedor.consultar_asistencia.de_alumno(alumno_id)],
-        estados=ESTADOS,
+        estados=ESTADOS, semanas=semanas,
+        grafico_asistencia=graficos.linea(semanas, lambda s: s.asistencia, 0, 100, UMBRAL_ASISTENCIA,
+                                          f"{UMBRAL_ASISTENCIA:g} %", "{:g} %"),
+        grafico_promedio=graficos.linea(semanas, lambda s: s.promedio, 1, 7, UMBRAL_PROMEDIO,
+                                        f"{UMBRAL_PROMEDIO:.1f}", "{:.1f}"),
     )
+
+
+# ---------- HU-10 y HU-12: alertas ----------
+
+@router.get("/alertas")
+def ver_alertas(request: Request):
+    usuario = usuario_web(request, Rol.PROFESOR)
+    return render(request, "profesor/alertas.html", alertas=contenedor.vigilar_riesgo.pendientes(usuario))
+
+
+@router.post("/alertas/{alerta_id}/revisar")
+def revisar_alerta(request: Request, alerta_id: int):
+    usuario = usuario_web(request, Rol.PROFESOR)
+    contenedor.vigilar_riesgo.marcar_revisada(usuario, alerta_id)
+    avisar(request, "Alerta marcada como revisada.")
+    return ir_a("/profesor/alertas")
 
 
 # ---------- HU-05 ----------

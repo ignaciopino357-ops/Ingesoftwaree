@@ -85,10 +85,16 @@ class RepositorioNotasSQLite(RepositorioNotas):
             return [dict(f) for f in conn.execute("SELECT id, nombre FROM asignaturas ORDER BY id")]
 
     def de_alumno(self, alumno_id: int) -> dict:
+        return self.de_alumno_hasta(alumno_id, None)
+
+    def de_alumno_hasta(self, alumno_id: int, hasta: Optional[date]) -> dict:
+        filtro, parametros = "", [alumno_id]
+        if hasta is not None:
+            filtro, parametros = " AND (n.fecha IS NULL OR n.fecha <= ?)", [alumno_id, hasta.isoformat()]
         with conexion() as conn:
             filas = conn.execute(
-                """SELECT a.nombre, n.nota FROM notas n JOIN asignaturas a ON a.id = n.asignatura_id
-                   WHERE n.alumno_id = ? ORDER BY a.id, n.numero""", (alumno_id,)).fetchall()
+                f"""SELECT a.nombre, n.nota FROM notas n JOIN asignaturas a ON a.id = n.asignatura_id
+                    WHERE n.alumno_id = ?{filtro} ORDER BY a.id, n.numero""", parametros).fetchall()
         resultado = {}
         for f in filas:
             resultado.setdefault(f["nombre"], []).append(f["nota"])
@@ -105,17 +111,19 @@ class RepositorioNotasSQLite(RepositorioNotas):
             resultado.setdefault(f["alumno_id"], {})[f["numero"]] = f["nota"]
         return resultado
 
-    def guardar(self, asignatura_id: int, cambios: list[tuple[int, int, Optional[float]]]) -> None:
+    def guardar(self, asignatura_id: int, cambios: list[tuple[int, int, Optional[float]]], fecha: date) -> None:
         with conexion() as conn:
             for alumno_id, numero, nota in cambios:
                 if nota is None:
                     conn.execute("DELETE FROM notas WHERE alumno_id = ? AND asignatura_id = ? AND numero = ?",
                                  (alumno_id, asignatura_id, numero))
                 else:
+                    # La fecha solo cambia si la nota es nueva o cambió de valor (historial HU-13)
                     conn.execute(
-                        """INSERT INTO notas (alumno_id, asignatura_id, numero, nota) VALUES (?, ?, ?, ?)
-                           ON CONFLICT (alumno_id, asignatura_id, numero) DO UPDATE SET nota = excluded.nota""",
-                        (alumno_id, asignatura_id, numero, nota))
+                        """INSERT INTO notas (alumno_id, asignatura_id, numero, nota, fecha) VALUES (?, ?, ?, ?, ?)
+                           ON CONFLICT (alumno_id, asignatura_id, numero) DO UPDATE
+                           SET nota = excluded.nota, fecha = excluded.fecha WHERE notas.nota <> excluded.nota""",
+                        (alumno_id, asignatura_id, numero, nota, fecha.isoformat()))
 
 
 class RepositorioAsistenciaSQLite(RepositorioAsistencia):

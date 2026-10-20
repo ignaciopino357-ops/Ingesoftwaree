@@ -1,4 +1,4 @@
-# Seguimiento de trayectorias y riesgo de deserción · Sprints 1 y 2
+# Seguimiento de trayectorias y riesgo de deserción · Sprints 1, 2 y 3
 
 Proyecto semestral de Ingeniería de Software · Desafío N°7.
 
@@ -25,8 +25,10 @@ uvicorn app.main:app --reload
 - API REST documentada (Swagger): <http://127.0.0.1:8000/docs>. Primero `POST /api/login`,
   copiar el `access_token` y pegarlo en el botón **Authorize**.
 - La primera vez se crea `liceo.db` con datos de prueba. Para empezar de cero: `python -m app.compartido.seed --reset`.
+- **Si ya tenían un `liceo.db` del Sprint 2**, la app lo actualiza sola (agrega las tablas de alertas y la fecha de
+  las notas). Para ver las alertas y el historial de la demo conviene recrearla con `--reset`.
 
-Pruebas automáticas (102 pruebas):
+Pruebas automáticas (174 pruebas):
 
 ```powershell
 pytest -v                    # todas
@@ -37,11 +39,11 @@ pytest tests/unitarias -v    # solo dominio y casos de uso (no usan base de dato
 
 | Rol | Usuario | Contraseña | Qué ver |
 | --- | --- | --- | --- |
-| Directiva | `directiva` | `directiva123` | Cursos, asignación de alumnos y calendario |
-| Profesor jefe 3° Medio A | `pjara` | `profe123` | Curso con 8 alumnos y riesgos variados |
+| Directiva | `directiva` | `directiva123` | Cursos, usuarios, riesgo por curso y calendario |
+| Profesor jefe 3° Medio A | `pjara` | `profe123` | Curso con 8 alumnos, riesgos variados y 2 alertas |
 | Profesor jefe 3° Medio B | `cmunoz` | `profe123` | Curso con 2 alumnos |
 | Profesor sin curso | `pnuevo` | `profe123` | Mensaje "no tiene cursos asignados" |
-| Alumno | `alumno1` … `alumno12` | `alumno123` | Portal alumno (Sprint 3) |
+| Alumno | `alumno1` … `alumno12` | `alumno123` | Sus notas y su asistencia en calendario (`alumno3` tiene ausencias) |
 
 Los nombres son inventados. Los feriados cargados son de ejemplo: revisarlos en el portal directiva.
 
@@ -88,7 +90,23 @@ Los módulos **Intervención Psicosocial** y **Comunidad y Dirección** quedan f
 | HU-02 Asignar alumnos y profesor | 2 | `academico/casos_uso.py` (`AdministrarCursos`) | `entrada_web_directiva.py` | `POST /api/cursos`, `POST /api/cursos/{id}/alumnos` |
 | HU-03 Calendario del semestre | 2 | `academico/dominio.py`, `AdministrarCalendario` | `entrada_web_directiva.py` | `PUT /api/calendario/semestre`, `POST /api/calendario/feriados` |
 | HU-08 Exportar a Excel | 2 | `ExportarCurso` + `adaptadores/salida_excel.py` | `entrada_web_profesor.py` | `GET /api/cursos/{id}/exportar/{tipo}` |
-| HU-09 Portal alumno | 3 | — | `seguridad/adaptadores/entrada_web_alumno.py` (aviso) | — |
+| HU-09 Ver mis notas y asistencia | 3 | `academico/casos_uso.py` (`ConsultarMisDatos`) | `academico/adaptadores/entrada_web_alumno.py` | `GET /api/alumno/mis-datos` |
+| HU-10 Alerta al pasar a riesgo Alto | 3 | `riesgo/casos_uso.py` (`VigilarRiesgo`), `riesgo/dominio.py` (`debe_alertar_alto`) | `entrada_web_profesor.py` (`/profesor/alertas`) | `GET /api/alertas`, `POST /api/alertas/{id}/revisada` |
+| HU-11 Registrar alumnos y profesores | 3 | `seguridad/casos_uso.py` (`RegistrarUsuario`) | `entrada_web_directiva.py` (`/directiva/usuarios`) | `POST /api/usuarios` |
+| HU-12 Alerta por 3 ausencias seguidas | 3 | `riesgo/dominio.py` (`rachas_de_ausencias`), `VigilarRiesgo` | `/profesor/alertas` | `GET /api/alertas` |
+| HU-13 Historial de riesgo | 3 | `riesgo/casos_uso.py` (`HistorialRiesgo`) | ficha del alumno + `web/graficos.py` | `GET /api/cursos/{id}/alumnos/{id}/historial` |
+| HU-14 Filtrar y ordenar por riesgo | 3 | `ConsultarCursoConRiesgo.filtrar` | `entrada_web_profesor.py` (`?ver=Alto`) | `GET /api/cursos/{id}/riesgo?estado=Alto` |
+| HU-15 Resumen de riesgo por curso | 3 | `riesgo/casos_uso.py` (`ResumenRiesgoCursos`) | `entrada_web_directiva.py` (`/directiva/riesgo`) | `GET /api/riesgo/resumen` |
+| HU-16 Mi asistencia en calendario | 3 | `academico/casos_uso.py` (`ConsultarMiCalendario`) | `entrada_web_alumno.py` (`/alumno/asistencia`) | — |
+
+### Cómo se generan las alertas (HU-10 y HU-12)
+
+Gestión Académica no conoce al Motor de Riesgo. Al guardar notas o asistencia, `RegistrarNotas` y `PasarLista`
+avisan por su puerto `ObservadorCambios` (`academico/puertos.py`). En `contenedor.py` ese puerto se conecta con
+`riesgo/adaptadores/entrada_academico.py`, que llama a `VigilarRiesgo.revisar_curso`. Así se respeta la
+dependencia del Hito 1 (Motor de Riesgo → Gestión Académica) y las alertas se crean en el mismo momento, sin bus de eventos.
+Las alertas no se repiten: la tabla `alertas` tiene una clave única por alumno, tipo y "clave" (día en que entró
+a Alto, o primer día de la racha de ausencias).
 
 ## Pruebas unitarias propias (taller de pytest)
 
@@ -99,6 +117,10 @@ Los módulos **Intervención Psicosocial** y **Comunidad y Dirección** quedan f
 | 3 | `tests/unitarias/test_academico_dominio.py` | `validar_nota` | Notas 0.9, 7.1, 8 y -3 lanzan `ValueError` (`pytest.raises`) | Excepción |
 | 4 | `tests/unitarias/test_casos_uso.py` | `RegistrarNotas` | Si una nota es inválida no se guarda ninguna (repositorio falso) | Regla de negocio |
 | 5 | `tests/unitarias/test_riesgo.py` | `porcentaje_asistencia` | Una falta justificada cuenta como asistencia (8 P + 1 J de 10 = 90 %) | Comportamiento propio |
+
+Sprint 3: `tests/unitarias/test_sprint3_dominio.py` (reglas puras de alertas, rachas, semanas y validación de
+usuarios), `tests/unitarias/test_sprint3_casos_uso.py` (casos de uso con repositorios falsos) y
+`tests/integracion/test_sprint3_web.py` / `test_sprint3_api.py` (criterios de aceptación de HU-09 a HU-16).
 
 Todas siguen el patrón Arrange · Act · Assert y se ejecutan sin base de datos.
 
@@ -115,6 +137,7 @@ Todas siguen el patrón Arrange · Act · Assert y se ejecutan sin base de datos
 | Regla de riesgo | Alto si falla asistencia o promedio | Bajo (verde) / Medio (amarillo, falla una) / Alto (rojo, fallan ambas) | Distingue un problema de dos; mismos umbrales 85 % y 4.0 |
 
 - **% de asistencia** = (Presente + Justificado) / días registrados.
-- **Privacidad:** el estado de riesgo solo lo ve el profesor jefe del curso (ni la directiva ni el alumno).
+- **Privacidad:** el estado de riesgo con nombres solo lo ve el profesor jefe del curso. La directiva ve solo
+  cantidades por curso (HU-15) y el alumno nunca ve su estado de riesgo (HU-09 y HU-16).
 - **Antes de configurar el semestre** solo se bloquean sábados y domingos al pasar lista.
 - La clave que firma la sesión y los JWT se define con la variable de entorno `SECRET_KEY`.

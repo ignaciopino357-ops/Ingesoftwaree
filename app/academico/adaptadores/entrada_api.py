@@ -148,6 +148,29 @@ def exportar(curso_id: int, tipo: Literal["notas", "asistencia"], usuario: Usuar
                     headers={"Content-Disposition": f'attachment; filename="{tipo}_curso_{curso_id}.xlsx"'})
 
 
+# ---------- HU-09: portal alumno ----------
+
+class AsignaturaAlumno(BaseModel):
+    nombre: str
+    notas: list[float]
+    promedio: Optional[float]
+
+
+class MisDatosSalida(BaseModel):
+    curso: Optional[str]
+    asignaturas: list[AsignaturaAlumno]
+    conteo: dict[str, int]
+    porcentaje: Optional[float] = Field(description="% de asistencia: (P + J) / días registrados")
+    ausencias: list[date]
+    justificadas: list[date]
+
+
+@router.get("/alumno/mis-datos", response_model=MisDatosSalida, tags=["Portal alumno"], responses=ERRORES)
+def mis_datos(usuario: Usuario = Depends(con_rol(Rol.ALUMNO))):
+    """HU-09: notas y asistencia del alumno dueño del token. No incluye el estado de riesgo."""
+    return MisDatosSalida(**contenedor.consultar_mis_datos.ejecutar(usuario))
+
+
 # ---------- HU-02: administración de cursos (directiva) ----------
 
 @router.post("/cursos", response_model=CursoSalida, status_code=201,
