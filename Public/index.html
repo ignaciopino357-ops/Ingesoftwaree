@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Principal - Sistema de Alerta Temprana</title>
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #0d9488;
+            --background: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --alert-warning-bg: #fef3c7;
+            --alert-warning-text: #92400e;
+            --alert-danger-bg: #fee2e2;
+            --alert-danger-text: #991b1b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background);
+            color: var(--text-main);
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        select, button {
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+        }
+        button {
+            background-color: var(--secondary);
+            color: white;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        .grid-cursos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        .curso-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--secondary);
+        }
+        .curso-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+        }
+        .curso-info {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        .alert-warning {
+            background-color: var(--alert-warning-bg);
+            color: var(--alert-warning-text);
+            border: 1px solid #fde68a;
+        }
+        .alert-danger {
+            background-color: var(--alert-danger-bg);
+            color: var(--alert-danger-text);
+            border: 1px solid #fecaca;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Sistema Alerta Temprana CEM-Mineduc</h2>
+        <span>Docente en sesión: Diego Rubilar</span>
+    </header>
+
+    <div class="container">
+        <h1>Panel Principal - Mis Cursos Asignados</h1>
+
+        <div class="controls">
+            <label for="select-docente"><strong>Seleccionar Docente de Prueba:</strong></label>
+            <select id="select-docente">
+                <option value="1">Diego Rubilar (Docente - ID 1)</option>
+                <option value="2">Mirko Massa (Profesor Jefe - ID 2)</option>
+                <option value="4">Usuario Sin Asignación (ID 4)</option>
+            </select>
+            <button onclick="consultarCursos()">Cargar Cursos</button>
+            <span id="latencia-metric" style="color: var(--text-muted); font-size: 0.85rem;"></span>
+        </div>
+
+        <div id="alerta-error" class="alert alert-danger hidden"></div>
+        <div id="alerta-sin-cursos" class="alert alert-warning hidden"></div>
+
+        <div id="contenedor-cursos" class="grid-cursos"></div>
+    </div>
+
+    <script>
+        async function consultarCursos() {
+            const docenteId = document.getElementById('select-docente').value;
+            const contenedor = document.getElementById('contenedor-cursos');
+            const alertaError = document.getElementById('alerta-error');
+            const alertaSinCursos = document.getElementById('alerta-sin-cursos');
+            const latenciaSpan = document.getElementById('latencia-metric');
+
+            contenedor.innerHTML = '';
+            alertaError.classList.add('hidden');
+            alertaSinCursos.classList.add('hidden');
+            latenciaSpan.textContent = 'Consultando...';
+
+            const inicio = performance.now();
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/cursos?docenteId=${docenteId}`);
+                if (!response.ok) throw new Error("Falla HTTP en el servidor");
+
+                const data = await response.json();
+                const duracion = (performance.now() - inicio).toFixed(0);
+                latenciaSpan.textContent = `Tiempo de respuesta: ${duracion} ms (Límite: 2000 ms)`;
+
+                if (!data.tieneCarga || data.cursos.length === 0) {
+                    alertaSinCursos.textContent = data.mensaje || "Actualmente no tiene cursos asignados. Contacte a U.T.P.";
+                    alertaSinCursos.classList.remove('hidden');
+                    return;
+                }
+
+                data.cursos.forEach(curso => {
+                    const card = document.createElement('div');
+                    card.className = 'curso-card';
+                    card.innerHTML = `
+                        <h3>${curso.nombre}</h3>
+                        <div class="curso-info"><strong>Nivel:</strong> ${curso.nivel}</div>
+                        <div class="curso-info"><strong>Sección:</strong> Letra ${curso.letra}</div>
+                        <div class="curso-info"><strong>Año Lectivo:</strong> ${curso.anio}</div>
+                        <div class="curso-info"><strong>Estudiantes Matriculados:</strong> ${curso.totalEstudiantes}</div>
+                    `;
+                    contenedor.appendChild(card);
+                });
+            } catch (error) {
+                latenciaSpan.textContent = '';
+                alertaError.textContent = "Error al cargar los cursos. Reintentando...";
+                alertaError.classList.remove('hidden');
+            }
+        }
+        window.onload = consultarCursos;
+    </script>
+</body>
+</html>
