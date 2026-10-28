@@ -34,7 +34,10 @@ class CursosFalsos(RepositorioCursos):
         nuevo = max(self.cursos) + 1
         self.cursos[nuevo] = Curso(nuevo, nombre, profesor_id, None)
         return nuevo
-    def asignar_profesor(self, curso_id, profesor_id): pass
+    def asignar_profesor(self, curso_id, profesor_id): self.cursos[curso_id].profesor_id = profesor_id
+    def rol_de_usuario(self, usuario_id):
+        return {1: "directiva", 2: "profesor", 3: "profesor"}.get(usuario_id) or (
+            "alumno" if usuario_id in self.nombres else None)
     def alumnos(self, curso_id):
         return [Alumno(a, self.nombres[a]) for a, c in self.miembros.items() if c == curso_id]
     def todos_los_alumnos(self):

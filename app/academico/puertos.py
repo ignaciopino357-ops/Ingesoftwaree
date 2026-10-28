@@ -30,6 +30,10 @@ class RepositorioCursos(ABC):
     def asignar_profesor(self, curso_id: int, profesor_id: Optional[int]) -> None: ...
 
     @abstractmethod
+    def rol_de_usuario(self, usuario_id: int) -> Optional[str]:
+        """Rol del usuario ('profesor', 'alumno', ...) o None si no existe."""
+
+    @abstractmethod
     def alumnos(self, curso_id: int) -> list[Alumno]: ...
 
     @abstractmethod
