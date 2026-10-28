@@ -252,11 +252,28 @@ class AdministrarCursos:
             raise DatosInvalidos("Escriba el nombre del curso.")
         if self.cursos.existe_nombre(nombre):
             raise Conflicto(f"Ya existe un curso llamado {nombre}.")
-        return self.cursos.crear(nombre, profesor_id)
+        return self.cursos.crear(nombre, self._profesor_jefe(profesor_id))
 
     def asignar_profesor(self, curso_id: int, profesor_id: Optional[int]) -> None:
         self._curso(curso_id)
-        self.cursos.asignar_profesor(curso_id, profesor_id)
+        self.cursos.asignar_profesor(curso_id, self._profesor_jefe(profesor_id))
+
+    def _profesor_jefe(self, profesor_id) -> Optional[int]:
+        """HU-02: el profesor jefe debe ser un usuario existente con rol profesor (BUG-01 y BUG-02).
+
+        Acepta None o vacío (curso sin profesor jefe). Los formularios web envían texto, por eso se convierte aquí."""
+        if profesor_id in (None, ""):
+            return None
+        try:
+            profesor_id = int(profesor_id)
+        except (TypeError, ValueError):
+            raise DatosInvalidos("El profesor jefe elegido no es válido.")
+        rol = self.cursos.rol_de_usuario(profesor_id)
+        if rol is None:
+            raise NoEncontrado("El profesor jefe elegido no existe.")
+        if rol != Rol.PROFESOR.value:
+            raise DatosInvalidos("El profesor jefe debe ser un usuario con rol profesor.")
+        return profesor_id
 
     def agregar_alumno(self, curso_id: int, alumno_id: int) -> None:
         self._curso(curso_id)
