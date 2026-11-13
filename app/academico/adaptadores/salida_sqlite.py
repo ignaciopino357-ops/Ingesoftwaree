@@ -47,6 +47,11 @@ class RepositorioCursosSQLite(RepositorioCursos):
         with conexion() as conn:
             conn.execute("UPDATE cursos SET profesor_id = ? WHERE id = ?", (profesor_id, curso_id))
 
+    def rol_de_usuario(self, usuario_id: int) -> Optional[str]:
+        with conexion() as conn:
+            fila = conn.execute("SELECT rol FROM usuarios WHERE id = ?", (usuario_id,)).fetchone()
+        return fila["rol"] if fila else None
+
     def alumnos(self, curso_id: int) -> list[Alumno]:
         with conexion() as conn:
             filas = conn.execute(
