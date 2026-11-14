@@ -28,12 +28,35 @@ uvicorn app.main:app --reload
 - **Si ya tenían un `liceo.db` del Sprint 2**, la app lo actualiza sola (agrega las tablas de alertas y la fecha de
   las notas). Para ver las alertas y el historial de la demo conviene recrearla con `--reset`.
 
-Pruebas automáticas (174 pruebas):
+Pruebas automáticas (187 pruebas):
 
 ```powershell
 pytest -v                    # todas
 pytest tests/unitarias -v    # solo dominio y casos de uso (no usan base de datos)
 ```
+
+## Cómo ejecutarlo con Docker (Hito 3)
+
+Requiere Docker Desktop abierto. Un solo contenedor: la app FastAPI sirve los portales y la API; SQLite queda en el
+volumen `liceo_data`, así que los datos se conservan al recrear el contenedor.
+
+```powershell
+Copy-Item .env.example .env       # luego cambiar SECRET_KEY dentro de .env (no se sube a Git)
+docker compose config -q          # valida la configuración
+docker compose up -d --build      # construye y levanta
+docker compose ps                 # esperar estado (healthy)
+```
+
+- Portal: <http://localhost:8000> · API: <http://localhost:8000/docs>
+- Pruebas dentro del contenedor: `docker compose exec app pytest -q`
+- Volver a los datos de prueba: `docker compose exec app python -m app.compartido.seed --reset` y `docker compose restart app`
+- Detener: `docker compose down` (conserva los datos). **No usar `docker compose down -v`**: borra el volumen con la base.
+
+| Variable | Uso |
+| --- | --- |
+| `SECRET_KEY` | Firma la cookie de sesión y los tokens JWT. Obligatoria en `.env` |
+| `APP_PORT` | Puerto del computador (por defecto 8000) |
+| `LICEO_DB` | Ruta de la base dentro del contenedor (`/app/data/liceo.db`, fijada en `compose.yaml`) |
 
 ## Usuarios de prueba
 
