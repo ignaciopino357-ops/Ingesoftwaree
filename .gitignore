@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 liceo.db
 .pytest_cache/
+.env
